@@ -1,0 +1,13 @@
+.git
+.next
+.vinext
+.wrangler
+.venv
+node_modules
+dist
+__pycache__
+.pytest_cache
+*.pyc
+data/derived
+data/validation
+

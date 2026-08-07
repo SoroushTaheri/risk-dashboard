@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "critical_checks_pass": true,
+  "months_checked": 1000,
+  "failed_months": [],
+  "source_sha256": "51f3c6760f42acbe76dda42ed2ccfac04f744e32c97d93a446ea51b9438ecc8f",
+  "generator_version": "1.0.0",
+  "max_absolute_difference": 1.862645149230957e-09,
+  "max_relative_difference": 2.9936512570606903e-16
+}

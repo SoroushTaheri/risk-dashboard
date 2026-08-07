@@ -1,0 +1,9 @@
+{
+  "generator_version": "1.0.0",
+  "master_seed": 1405,
+  "record_label": "reconstructed",
+  "overlap_rule": "Seeded uniform integer within the mathematically feasible overlap interval.",
+  "total_loss_rule": "Total_Loss_Cases is a seeded subset of monthly accidents; the source does not document its relationship to coverages.",
+  "claim_severity_rule": "Positive lognormal-shaped own-damage weights and Pareto-shaped third-party weights are normalized to exact source totals.",
+  "policy_rule": "Synthetic risk weights allocate conditioned events without changing source counts or amounts."
+}

@@ -1,0 +1,48 @@
+{
+  "project": "Actuarial Risk Theory Laboratory",
+  "course": "Risk Theory, M.Sc. Actuarial Sciences, Shahid Beheshti University, Spring 1405",
+  "contributors": [
+    {
+      "chapter": "Source data",
+      "names": ["علی تیموری"],
+      "source_files": ["Students Work/Data/insurance_simulated_data.csv"],
+      "modules": ["actuarial/data_pipeline.py"],
+      "adaptations": "Immutable ingestion, deterministic companion reconstruction, and reconciliation checks."
+    },
+    {
+      "chapter": "Chapter 2 - Dr. Payandeh — Risk measures",
+      "names": ["محمدرضا سعیدخانی", "محمد مهدوی نسب", "علی جهانبان", "محمد اشکوری", "نجمه زارع"],
+      "source_files": ["Students Work/PCh2/files/Risk_Measures_and_Risk_Comparison.py", "Students Work/PCh2/files/دلتا گاما.R"],
+      "modules": ["actuarial/risk_measures.py"],
+      "adaptations": "Validated empirical, normal, EVT, bootstrap, retention, and pedagogical delta-gamma framing."
+    },
+    {
+      "chapter": "Modern Chapter 1 — Utility and insurance",
+      "names": ["ابوالفضل اقراری", "حامد اشراقی"],
+      "source_files": ["Students Work/Ch1/files/Chapter1.ipynb.json"],
+      "modules": ["actuarial/utility_reinsurance.py"],
+      "adaptations": "Explicit utility parameters, stable certainty equivalents, domain checks, and shared retention rules."
+    },
+    {
+      "chapter": "Modern Chapter 2 — Individual risk",
+      "names": ["نجمه زارع"],
+      "source_files": ["Students Work/Ch2/files/پیچش.R", "Students Work/Ch2/files/approximation.R"],
+      "modules": ["actuarial/individual_risk.py"],
+      "adaptations": "Normalized convolution and generalized moment-based approximations with explicit independence assumptions."
+    },
+    {
+      "chapter": "Modern Chapter 3 — Collective risk",
+      "names": ["محمد مهدوی نسب", "علی جهانبان", "محمدرضا سعیدخانی", "محمد اشکوری"],
+      "source_files": ["Students Work/Ch3/files/3.5.ipynb", "Students Work/Ch3/files/3.6.ipynb", "Students Work/Ch3/files/3.7.ipynb", "Students Work/Ch3/files/Section_3.8.py", "Students Work/Ch3/files/3.9.py", "Students Work/Ch3/files/3.9-improved.py", "Students Work/Ch3/files/Section_3.10.py"],
+      "modules": ["actuarial/collective_risk.py"],
+      "adaptations": "Consolidated fitting, Panjer, FFT, simulation, approximation, and stop-loss logic with normalization checks."
+    },
+    {
+      "chapter": "Modern Chapter 4 — Ruin theory",
+      "names": ["ابوالفضل اقراری", "حامد اشراقی"],
+      "source_files": ["Students Work/Ch4/files/insurance_ruin_analysis.py"],
+      "modules": ["actuarial/ruin.py"],
+      "adaptations": "Finite-horizon labeling, reproducible simulation, retained-loss premium consistency, and heavy-tail applicability checks."
+    }
+  ]
+}

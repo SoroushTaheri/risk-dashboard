@@ -1,0 +1,18 @@
+{
+  "source": "Students Work/Data/insurance_simulated_data.csv",
+  "sha256": "51f3c6760f42acbe76dda42ed2ccfac04f744e32c97d93a446ea51b9438ecc8f",
+  "rows": 1000,
+  "schema": [
+    "Total_Accidents",
+    "Own_Damage_Accidents",
+    "Third_Party_Accidents",
+    "Total_Loss_Cases",
+    "Mean_Own_Damage_Severity",
+    "Mean_Third_Party_Severity",
+    "Total_Own_Damage_Amount",
+    "Total_Third_Party_Amount",
+    "Total_Payout_Amount"
+  ],
+  "interpretation": "Each row is one independent synthetic month; row order is not a real calendar.",
+  "immutable": true
+}
