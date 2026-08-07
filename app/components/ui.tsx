@@ -3,13 +3,27 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import type { Language } from "./i18n";
 import { tr, useLanguage } from "./i18n";
 
-export const formatMoney = (value: number, compact = true, language: Language = "en") =>
-  new Intl.NumberFormat(language === "fa" ? "fa-IR" : "en-US", {
+export const formatMoney = (value: number, compact = true, language: Language = "en") => {
+  if (language === "fa") {
+    const amount = new Intl.NumberFormat("fa-IR", {
+      notation: compact ? "compact" : "standard",
+      maximumFractionDigits: compact ? 1 : 0,
+    }).format(value);
+    return `${amount} تومان`;
+  }
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "IRT",
     notation: compact ? "compact" : "standard",
     maximumFractionDigits: compact ? 1 : 0,
   }).format(value);
+};
+
+export function formatMonthLabel(monthId: string, language: Language) {
+  if (language !== "fa") return monthId;
+  const monthNumber = Number.parseInt(monthId.replace(/^M/i, ""), 10);
+  return Number.isFinite(monthNumber) ? `ماه ${monthNumber.toLocaleString("fa-IR")} ام` : monthId;
+}
 
 export const formatNumber = (value: number, digits = 1, language: Language = "en") =>
   new Intl.NumberFormat(language === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits }).format(value);

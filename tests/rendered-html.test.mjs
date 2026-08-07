@@ -52,7 +52,13 @@ test("ships local fonts, social card, and reconciled browser data", async () => 
     access(new URL("../public/data/monthly.json", import.meta.url)),
   ]);
   const summary = JSON.parse(await readFile(new URL("../public/data/summary.json", import.meta.url), "utf8"));
+  const months = JSON.parse(await readFile(new URL("../public/data/monthly.json", import.meta.url), "utf8"));
   assert.equal(summary.months, 1000);
   assert.equal(summary.reconciliation_status, "pass");
   assert.equal(summary.source_sha256.length, 64);
+  assert.equal(months[0].total_loss_cases, 3);
+  assert.equal(months[0].overlap_accidents, 10);
+  const uiSource = await readFile(new URL("../app/components/ui.tsx", import.meta.url), "utf8");
+  assert.match(uiSource, /ماه \$\{monthNumber\.toLocaleString\("fa-IR"\)\} ام/);
+  assert.match(uiSource, /تومان/);
 });

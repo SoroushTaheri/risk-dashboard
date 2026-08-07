@@ -180,6 +180,7 @@ def generate(paths: PipelinePaths | None = None) -> dict[str, object]:
     claims: list[dict[str, object]] = []
     exposures: list[dict[str, object]] = []
     reconciliation: list[dict[str, object]] = []
+    overlap_by_month: dict[str, int] = {}
 
     for row_number, source in enumerate(source_rows, start=1):
         month_id = f"M{row_number:04d}"
@@ -198,6 +199,7 @@ def generate(paths: PipelinePaths | None = None) -> dict[str, object]:
         third = int(source["Third_Party_Accidents"])
         lower, upper = max(0, own + third - total), min(own, third)
         overlap = int(month_rng.integers(lower, upper + 1)) if upper > lower else lower
+        overlap_by_month[month_id] = overlap
         categories = np.array(
             ["both"] * overlap
             + ["own_damage_only"] * (own - overlap)
@@ -349,6 +351,8 @@ def generate(paths: PipelinePaths | None = None) -> dict[str, object]:
             "accidents": row["Total_Accidents"],
             "own_claims": row["Own_Damage_Accidents"],
             "third_claims": row["Third_Party_Accidents"],
+            "total_loss_cases": row["Total_Loss_Cases"],
+            "overlap_accidents": overlap_by_month[str(row["month_id"])],
             "own_amount": row["Total_Own_Damage_Amount"],
             "third_amount": row["Total_Third_Party_Amount"],
             "payout": row["Total_Payout_Amount"],
@@ -386,4 +390,3 @@ def assert_reconciled(paths: PipelinePaths | None = None) -> dict[str, object]:
 
 if __name__ == "__main__":
     print(json.dumps(generate(), indent=2))
-

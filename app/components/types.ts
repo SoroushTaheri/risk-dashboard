@@ -5,6 +5,8 @@ export type MonthRow = {
   accidents: number;
   own_claims: number;
   third_claims: number;
+  total_loss_cases: number;
+  overlap_accidents: number;
   own_amount: number;
   third_amount: number;
   payout: number;
@@ -23,4 +25,3 @@ export type PortfolioSummary = {
 };
 
 export type PortfolioData = { months: MonthRow[]; summary: PortfolioSummary };
-
