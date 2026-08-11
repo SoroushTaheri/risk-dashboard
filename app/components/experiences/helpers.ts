@@ -33,14 +33,13 @@ export function normalPdf(x: number, mu: number, sd: number) {
   return Math.exp(-0.5 * ((x - mu) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
 }
 
-export function useScenarioNumber(key: string, fallback: number) {
+export function useMonthNumber(key: string, fallback: number) {
   const initial = typeof window === "undefined" ? fallback : Number(new URLSearchParams(window.location.search).get(key)) || fallback;
   return initial;
 }
 
-export function updateScenario(key: string, value: string | number) {
+export function updateMonth(key: string, value: string | number) {
   const url = new URL(window.location.href);
   url.searchParams.set(key, String(value));
   window.history.replaceState({}, "", url);
 }
-

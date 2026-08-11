@@ -2,76 +2,104 @@
 
 import { useState } from "react";
 import { EChart } from "../EChart";
-import { Formula } from "../Formula";
+import { Formula, InlineMath } from "../Formula";
 import { tr, useLanguage } from "../i18n";
 import type { PortfolioData } from "../types";
 import { Contributor, MetricCard, Notice, PanelCredit, ReferenceBand, ResultTag, formatMoney } from "../ui";
+import { useActuarialApi, useActuarialGet } from "../useActuarialApi";
 import { histogram, mean, variance } from "./helpers";
+
+type CollectiveCoverage = "total" | "own_damage" | "third_party_liability";
+type CollectiveApiResult = { mean_frequency: number; mean_severity: number; empirical_mean_aggregate_loss: number; component_expected_aggregate_loss: number; identity_relative_error: number; p95_aggregate_loss: number; components: { coverage: string; expected_aggregate_loss: number }[] };
+type FrequencyApiResult = { values: { mean: number; variance: number; dispersion_index: number }; unit: string; coverage: string };
 
 export function CollectiveExperience({ data }: { data: PortfolioData }) {
   const { language } = useLanguage();
   const t = (en: string, fa: string) => tr(language, en, fa);
   const money = (value: number) => formatMoney(value, true, language);
-  const [frequency, setFrequency] = useState("negative-binomial");
-  const [severity, setSeverity] = useState("lognormal");
-  const [method, setMethod] = useState("panjer");
-  const [simulationSize, setSimulationSize] = useState(10000);
-  const [step, setStep] = useState(250000);
-  const counts = data.months.map((row) => row.accidents);
-  const countMean = mean(counts);
-  const countVariance = variance(counts);
-  const dispersion = countVariance / countMean;
-  const claimMean = data.summary.total_payout / data.months.reduce((sum, row) => sum + row.own_claims + row.third_claims, 0);
-  const aggregateMean = countMean * claimMean;
-  const aggregateSd = Math.sqrt(countMean * claimMean ** 2 * (severity === "pareto" ? 5.4 : severity === "gamma" ? 2.1 : 3.2));
-  const countHist = histogram(counts, 18);
-  const aggregatePoints = Array.from({ length: 28 }, (_, index) => {
-    const x = Math.max(0, aggregateMean - aggregateSd * 2.2 + index * aggregateSd * 4.8 / 27);
-    const base = Math.exp(-0.5 * ((x - aggregateMean) / aggregateSd) ** 2);
-    return [x, base, base * (1 + 0.035 * Math.sin(index)), base * (1 - 0.025 * Math.cos(index * 1.3))];
-  });
-  const methodLabel = method === "panjer" ? t("Panjer recursion", "بازگشت پانژر") : method === "fft" ? t("FFT inversion", "وارون‌سازی FFT") : t("Monte Carlo", "مونت‌کارلو");
-  const severityLabel = severity === "empirical" ? t("empirical", "تجربی") : severity === "gamma" ? t("gamma", "گاما") : severity === "lognormal" ? t("lognormal", "لگ‌نرمال") : t("Pareto", "پارتو");
+  const [coverage, setCoverage] = useState<CollectiveCoverage>("total");
+  const [frequency, setFrequency] = useState("poisson");
+  const [frequencyUnit, setFrequencyUnit] = useState<"claim" | "accident">("claim");
+  const [method, setMethod] = useState("monte-carlo");
+  const [confidence, setConfidence] = useState(0.95);
+  const { data: apiResult, error: apiError } = useActuarialApi<CollectiveApiResult>("/api/collective-risk", { coverage, confidence });
+  const frequencyCoverage = frequencyUnit === "accident" ? "total" : coverage;
+  const { data: frequencyResult } = useActuarialGet<FrequencyApiResult>(`/api/frequency-fit?model=${frequency}&unit=${frequencyUnit}&coverage=${frequencyCoverage}`);
+  const ownCounts = data.months.map((row) => row.own_claims);
+  const liabilityCounts = data.months.map((row) => row.liability_claims);
+  const counts = data.months.map((row) => coverage === "own_damage" ? row.own_claims : coverage === "third_party_liability" ? row.liability_claims : row.total_claims);
+  const frequencyCounts = frequencyUnit === "accident" ? data.months.map((row) => row.accidents) : counts;
+  const aggregateLosses = data.months.map((row) => coverage === "own_damage" ? row.own_amount : coverage === "third_party_liability" ? row.third_amount : row.payout);
+  const countMean = apiResult?.mean_frequency ?? mean(counts);
+  const frequencyMean = frequencyResult?.values.mean ?? mean(frequencyCounts);
+  const frequencyVariance = frequencyResult?.values.variance ?? variance(frequencyCounts);
+  const dispersion = frequencyResult?.values.dispersion_index ?? frequencyVariance / frequencyMean;
+  const totalClaims = counts.reduce((sum, value) => sum + value, 0);
+  const totalPaid = aggregateLosses.reduce((sum, value) => sum + value, 0);
+  const claimMean = apiResult?.mean_severity ?? totalPaid / totalClaims;
+  const aggregateMean = apiResult?.empirical_mean_aggregate_loss ?? mean(aggregateLosses);
+  const identityMean = apiResult?.component_expected_aggregate_loss ?? countMean * claimMean;
+  const identityError = apiResult?.identity_relative_error ?? Math.abs(identityMean / aggregateMean - 1);
+  const countHist = histogram(frequencyCounts, 18);
+  const aggregateHist = histogram(aggregateLosses, 26);
+  const ordered = [...aggregateLosses].sort((a, b) => a - b);
+  const pIndex = Math.max(0, Math.ceil(confidence * ordered.length) - 1);
+  const pLoss = apiResult?.p95_aggregate_loss ?? ordered[pIndex];
+  const ownSeverity = data.months.reduce((sum, row) => sum + row.own_amount, 0) / ownCounts.reduce((sum, value) => sum + value, 0);
+  const liabilitySeverity = data.months.reduce((sum, row) => sum + row.third_amount, 0) / liabilityCounts.reduce((sum, value) => sum + value, 0);
+  const ownExpected = apiResult?.components.find((item) => item.coverage === "own_damage")?.expected_aggregate_loss ?? mean(ownCounts) * ownSeverity;
+  const liabilityExpected = apiResult?.components.find((item) => item.coverage === "third_party_liability")?.expected_aggregate_loss ?? mean(liabilityCounts) * liabilitySeverity;
+  const methodLabel = method === "panjer" ? t("Panjer recursion", "بازگشت پانژر") : method === "fft" ? t("FFT inversion", "وارون‌سازی FFT") : t("Entity-first Monte Carlo", "مونت‌کارلوی مبتنی بر موجودیت");
   const contributors = "محمد مهدوی نسب، علی جهانبان، محمدرضا سعیدخانی، محمد اشکوری";
 
   return (
     <div className="experience-stack">
-      <ReferenceBand source={t("Modern Actuarial Risk Theory · Chapter 3 · Collective risk model", "Modern Actuarial RIsk Theory · فصل ۳ · مدل ریسک جمعی")} formula="S = Σᵢ₌₁ᴺXᵢ, E[S]=E[N]E[X]">
-        {t("The random frequency N and severity X are modeled separately before they are compounded into S. The page then compares the chapter's Panjer, FFT, and Monte Carlo calculation routes.", "ابتدا فراوانی تصادفی N و شدت X جداگانه مدل می‌شوند و سپس در S ترکیب می‌شوند. بعد سه مسیر محاسباتی فصل، یعنی پانژر، FFT و مونت‌کارلو، مقایسه می‌شوند.")}
+      <ReferenceBand source={t("Modern Actuarial Risk Theory · Chapter 3 · Collective risk model", "Modern Actuarial Risk Theory · فصل ۳ · مدل ریسک جمعی")} formula={String.raw`S=\sum_{i=1}^{N}X_i,\quad E[S]=E[N]E[X]`}>
+        {t("N is a claim count and X is the matching policy-claim severity. Physical accident count is shown elsewhere and is never multiplied by a blended claim severity.", "N تعداد پرونده‌های خسارت و X شدت همان خسارت بیمه‌نامه‌ای است. تعداد حادثه‌ی فیزیکی در جای دیگری نمایش داده می‌شود و هرگز در شدت ترکیبی خسارت ضرب نمی‌شود.")}
       </ReferenceBand>
 
       <section className="control-strip" aria-label={t("Collective risk controls", "کنترل‌های مدل ریسک جمعی")}>
-        <label><span>{t("Frequency distribution of N", "توزیع فراوانی N")}</span><select value={frequency} onChange={(event) => setFrequency(event.target.value)}><option value="poisson">{t("Poisson", "پواسون")}</option><option value="negative-binomial">{t("Negative binomial", "دوجمله‌ای منفی")}</option></select></label>
-        <label><span>{t("Severity distribution of X", "توزیع شدت X")}</span><select value={severity} onChange={(event) => setSeverity(event.target.value)}><option value="empirical">{t("Empirical claims", "خسارت‌های تجربی")}</option><option value="gamma">{t("Gamma", "گاما")}</option><option value="lognormal">{t("Lognormal", "لگ‌نرمال")}</option><option value="pareto">{t("Pareto", "پارتو")}</option></select></label>
-        <label><span>{t("Method for Fₛ", "روش محاسبه‌ی Fₛ")}</span><select value={method} onChange={(event) => setMethod(event.target.value)}><option value="panjer">{t("Panjer recursion", "بازگشت پانژر")}</option><option value="fft">{t("FFT inversion", "وارون‌سازی FFT")}</option><option value="simulation">{t("Monte Carlo", "مونت‌کارلو")}</option></select></label>
-        <label className="range-control"><span>{t("Simulation runs (M)", "تعداد شبیه‌سازی (M)")} <strong>{simulationSize.toLocaleString(language === "fa" ? "fa-IR" : "en-US")}</strong></span><input type="range" min="1000" max="50000" step="1000" value={simulationSize} onChange={(event) => setSimulationSize(Number(event.target.value))} /></label>
-        <label className="range-control"><span>{t("Severity grid step (h)", "گام شبکه‌ی شدت (h)")} <strong>{money(step)}</strong></span><input type="range" min="50000" max="1000000" step="50000" value={step} onChange={(event) => setStep(Number(event.target.value))} /></label>
+        <label><span>{t("Claim portfolio", "پرتفوی خسارت")}</span><select value={coverage} onChange={(event) => setCoverage(event.target.value as CollectiveCoverage)}><option value="total">{t("Stratified combined book", "پرتفوی ترکیبی لایه‌بندی‌شده")}</option><option value="own_damage">{t("Own-damage claims", "خسارت‌های بدنه")}</option><option value="third_party_liability">{t("Liability claims", "خسارت‌های شخص ثالث")}</option></select></label>
+        <label><span>{t("Frequency fit", "برازش فراوانی")}</span><select value={frequency} onChange={(event) => setFrequency(event.target.value)}><option value="poisson">{t("Poisson", "پواسون")}</option><option value="negative_binomial">{t("Negative binomial", "دوجمله‌ای منفی")}</option></select></label>
+        <label><span>{t("Frequency unit", "واحد فراوانی")}</span><select value={frequencyUnit} onChange={(event) => setFrequencyUnit(event.target.value as "claim" | "accident")}><option value="claim">{t("Policy claims · collective N", "پرونده خسارت · N جمعی")}</option><option value="accident">{t("Physical accidents · comparison only", "حوادث فیزیکی · فقط مقایسه")}</option></select></label>
+        <label><span>{t("Calculation route", "مسیر محاسباتی")}</span><select value={method} onChange={(event) => setMethod(event.target.value)}><option value="monte-carlo">{t("Entity-first Monte Carlo", "مونت‌کارلوی مبتنی بر موجودیت")}</option><option value="panjer">{t("Panjer textbook route", "مسیر کتابی پانژر")}</option><option value="fft">{t("FFT textbook route", "مسیر کتابی FFT")}</option></select></label>
+        <label className="range-control"><span>{t("Upper quantile", "چندک بالا")} <strong>{(confidence * 100).toFixed(0)}%</strong></span><input type="range" min="0.8" max="0.99" step="0.01" value={confidence} onChange={(event) => setConfidence(Number(event.target.value))} /></label>
       </section>
 
       <div className="metric-grid four">
-        <MetricCard label="E[N]" value={countMean.toFixed(1)} detail={t("Mean monthly accident count", "میانگین تعداد حادثه‌ی ماهانه")} tone="blue" />
-        <MetricCard label="Var(N) / E[N]" value={dispersion.toFixed(2)} detail={dispersion > 1.15 ? t("Overdispersed relative to Poisson", "پراکندگی بیش از پواسون") : t("Close to Poisson dispersion", "نزدیک به پراکندگی پواسون")} tone={dispersion > 1.15 ? "amber" : "green"} />
-        <MetricCard label="E[X]" value={money(claimMean)} detail={t(`Mean under the selected ${severityLabel} severity`, `میانگین شدت تحت توزیع ${severityLabel}`)} tone="teal" />
-        <MetricCard label="E[S]" value={money(aggregateMean)} detail="E[N] × E[X]" tone="blue" />
+        <MetricCard label={<InlineMath equation={String.raw`E[N]`} />} value={countMean.toFixed(2)} detail={t("Mean policy-claim count per month", "میانگین تعداد پرونده‌ی خسارت در هر ماه")} tone="blue" />
+        <MetricCard label={<InlineMath equation={String.raw`E[X]`} />} value={money(claimMean)} detail={t("Mean paid severity for the same claims", "میانگین شدت پرداختی همان خسارت‌ها")} tone="teal" />
+        <MetricCard label={<InlineMath equation={String.raw`E[S]=E[N]E[X]`} />} value={money(identityMean)} detail={t(`Identity error ${(identityError * 100).toExponential(1)}%`, `خطای اتحاد ${(identityError * 100).toExponential(1)}٪`)} tone="green" />
+        <MetricCard label={<InlineMath equation={String.raw`Q_{${(confidence * 100).toFixed(0)}\%}(S)`} />} value={money(pLoss)} detail={t("Empirical aggregate paid loss", "خسارت پرداختی کل تجربی")} tone="amber" />
       </div>
 
       <div className="panel-grid equal">
         <section className="panel">
-          <div className="panel-heading"><div><ResultTag tone="blue">{t("Source data and fit", "داده‌ی منبع و برازش")}</ResultTag><h2>{t("Does the selected model describe N?", "آیا مدل انتخاب‌شده N را توصیف می‌کند؟")}</h2><p>{frequency === "poisson" ? t("The Poisson chapter model requires Var(N)=E[N]; compare that restriction with the empirical bars.", "مدل پواسون فصل شرط Var(N)=E[N] دارد؛ این محدودیت را با ستون‌های تجربی مقایسه کنید.") : t("The negative-binomial model allows Var(N)>E[N], matching the observed overdispersion more directly.", "مدل دوجمله‌ای منفی Var(N)>E[N] را می‌پذیرد و با بیش‌پراکندگی مشاهده‌شده سازگارتر است.")}</p></div></div>
-          <EChart label={t("Monthly accident count distribution and fitted frequency", "توزیع تعداد حادثه‌ی ماهانه و فراوانی برازش‌شده")} option={{ animation: false, color: ["#79a5ef", "#d49a28"], grid: { left: 52, right: 18, top: 38, bottom: 44 }, legend: { top: 0 }, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: countHist.map(([mid]) => Math.round(mid)), name: t("claim count N", "تعداد خسارت N"), nameLocation: "middle", nameGap: 28 }, yAxis: { type: "value", name: t("months", "ماه‌ها"), splitLine: { lineStyle: { color: "#e8edf3" } } }, series: [{ name: t("Empirical", "تجربی"), type: "bar", data: countHist.map(([, count]) => count) }, { name: frequency === "poisson" ? t("Poisson fit", "برازش پواسون") : t("Negative-binomial fit", "برازش دوجمله‌ای منفی"), type: "line", smooth: true, data: countHist.map(([, count], index) => count * (frequency === "poisson" ? 0.92 + 0.13 * Math.cos(index / 2) : 0.98 + 0.035 * Math.sin(index))) }] }} />
-          <PanelCredit names={contributors} role={t("Frequency fitting and model-comparison calculations.", "محاسبات برازش فراوانی و مقایسه‌ی مدل‌ها.")} />
+          <div className="panel-heading"><div><ResultTag tone="green">{t("API-fitted frequency", "فراوانی برازش‌شده با API")}</ResultTag><h2>{t("Frequency distribution across synthetic months", "توزیع فراوانی در ماه‌های شبیه‌سازی‌شده")}</h2><p>{frequencyUnit === "claim" ? t(`The Python-fitted ${frequency === "poisson" ? "Poisson" : "negative-binomial"} family uses the same policy-claim count as the collective model.`, `خانواده‌ی ${frequency === "poisson" ? "پواسون" : "دوجمله‌ای منفی"} در پایتون از همان تعداد پرونده‌ی خسارت مدل جمعی استفاده می‌کند.`) : t("This is a separate physical-accident frequency comparison. It never replaces claim count in the collective expected-loss identity.", "این مقایسه‌ی جداگانه‌ی فراوانی حادثه‌ی فیزیکی است و هرگز جای تعداد خسارت را در اتحاد امید خسارت جمعی نمی‌گیرد.")}</p></div></div>
+          <EChart label={frequencyUnit === "claim" ? t("Claim-count distribution", "توزیع تعداد خسارت") : t("Physical-accident distribution", "توزیع تعداد حادثه‌ی فیزیکی")} option={{ animation: false, grid: { left: 52, right: 18, top: 24, bottom: 44 }, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: countHist.map(([mid]) => Math.round(mid)), name: frequencyUnit === "claim" ? t("policy-claim count", "تعداد پرونده‌ی خسارت") : t("physical-accident count", "تعداد حادثه‌ی فیزیکی"), nameLocation: "middle", nameGap: 28 }, yAxis: { type: "value", name: t("months", "ماه‌ها"), splitLine: { lineStyle: { color: "#e8edf3" } } }, series: [{ type: "bar", data: countHist.map(([, count]) => count), itemStyle: { color: "#79a5ef", borderRadius: [3, 3, 0, 0] } }] }} />
+          <dl className="compact-dl"><div><dt><InlineMath equation={String.raw`E[F]`} /></dt><dd>{frequencyMean.toFixed(2)}</dd></div><div><dt><InlineMath equation={String.raw`\operatorname{Var}(F)`} /></dt><dd>{frequencyVariance.toFixed(2)}</dd></div><div><dt>{t("Dispersion index", "شاخص پراکندگی")}</dt><dd>{dispersion.toFixed(3)}</dd></div><div><dt>{t("Frequency unit", "واحد فراوانی")}</dt><dd>{frequencyUnit === "claim" ? t("claims", "پرونده خسارت") : t("accidents", "حادثه")}</dd></div></dl>
         </section>
         <section className="panel">
-          <div className="panel-heading"><div><ResultTag tone="green">{method === "simulation" ? t("Simulated", "شبیه‌سازی‌شده") : t("Numerical", "عددی")}</ResultTag><h2>{t("Distribution of aggregate loss S", "توزیع خسارت کل S")}</h2><p>{t(`${methodLabel} calculates Fₛ after discretizing severity X with grid step h = ${money(step)}.`, `${methodLabel} پس از گسسته‌سازی شدت X با گام شبکه‌ی h = ${money(step)}، توزیع Fₛ را محاسبه می‌کند.`)}</p></div></div>
-          <EChart label={t("Panjer, FFT and Monte Carlo aggregate loss comparison", "مقایسه‌ی خسارت کل با پانژر، FFT و مونت‌کارلو")} option={{ animation: false, color: ["#2868d8", "#29957c", "#d49a28"], grid: { left: 50, right: 16, top: 38, bottom: 44 }, legend: { top: 0 }, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: aggregatePoints.map((row) => `${Math.round(row[0] / 1e6)}m`), axisLabel: { interval: 4 }, name: t("aggregate loss S", "خسارت کل S"), nameLocation: "middle", nameGap: 28 }, yAxis: { type: "value", axisLabel: { show: false }, splitLine: { lineStyle: { color: "#e8edf3" } } }, series: [{ name: t("Panjer", "پانژر"), type: "line", smooth: true, showSymbol: false, data: aggregatePoints.map((row) => row[1]) }, { name: "FFT", type: "line", smooth: true, showSymbol: false, data: aggregatePoints.map((row) => row[2]) }, { name: t(`Monte Carlo (${(simulationSize / 1000).toFixed(0)}k)`, `مونت‌کارلو (${(simulationSize / 1000).toFixed(0)} هزار)`), type: "line", smooth: true, showSymbol: false, lineStyle: { type: "dashed" }, data: aggregatePoints.map((row) => row[3]) }] }} />
-          <PanelCredit names={contributors} role={t("Panjer, FFT, simulation, and severity-fitting calculations.", "محاسبات پانژر، FFT، شبیه‌سازی و برازش شدت.")} />
+          <div className="panel-heading"><div><ResultTag tone="blue">{t("Simulated aggregate loss", "خسارت کل شبیه‌سازی‌شده")}</ResultTag><h2>{t("Aggregate-loss distribution from matched claims", "توزیع خسارت کل از پرونده‌های متناظر")}</h2><p>{t(`${methodLabel} is the selected teaching route. The displayed portfolio result remains the reconciled entity-first empirical distribution.`, `${methodLabel} مسیر آموزشی انتخاب‌شده است. نتیجه‌ی پرتفوی نمایش‌داده‌شده همان توزیع تجربی تطبیق‌یافته‌ی مبتنی بر موجودیت است.`)}</p></div></div>
+          <EChart label={t("Aggregate insurer-paid loss distribution", "توزیع خسارت کل پرداختی بیمه‌گر")} option={{ animation: false, grid: { left: 52, right: 18, top: 24, bottom: 46 }, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: aggregateHist.map(([mid]) => mid >= 1000 ? `${(mid / 1000).toFixed(1)}bn` : `${Math.round(mid)}m`), axisLabel: { interval: 4 }, name: t("aggregate loss", "خسارت کل"), nameLocation: "middle", nameGap: 30 }, yAxis: { type: "value", name: t("months", "ماه‌ها"), splitLine: { lineStyle: { color: "#e8edf3" } } }, series: [{ type: "bar", data: aggregateHist.map(([, count]) => count), itemStyle: { color: "#4f8ddf", borderRadius: [3, 3, 0, 0] } }] }} />
+          <PanelCredit names={contributors} role={t("Frequency, severity, Panjer, FFT, and collective-risk methods.", "روش‌های فراوانی، شدت، پانژر، FFT و ریسک جمعی.")} />
         </section>
       </div>
 
-      <div className="method-cards"><article><span>01</span><div><strong>{t("Panjer recursion", "بازگشت پانژر")}</strong><p>{t("Recursive calculation on a discrete severity grid for (a,b,0) frequency classes.", "محاسبه‌ی بازگشتی روی شبکه‌ی گسسته‌ی شدت برای خانواده‌های فراوانی (a,b,0).")}</p></div></article><article><span>02</span><div><strong>{t("FFT inversion", "وارون‌سازی FFT")}</strong><p>{t("Fast transform inversion; grid width must control circular wrap-around error.", "وارون‌سازی سریع تبدیل؛ عرض شبکه باید خطای پیچش دوری را کنترل کند.")}</p></div></article><article><span>03</span><div><strong>{t("Monte Carlo", "مونت‌کارلو")}</strong><p>{t("Reproducible simulation with sampling error instead of only discretization error.", "شبیه‌سازی بازتولیدپذیر با خطای نمونه‌گیری، علاوه بر خطای گسسته‌سازی.")}</p></div></article></div>
-      <div className="formula-grid"><Formula equation={String.raw`S=\sum_{i=1}^{N}X_i`} label={t("Aggregate loss compounds a random claim count N with severities Xᵢ.", "خسارت کل، تعداد تصادفی N را با شدت‌های Xᵢ ترکیب می‌کند.")} /><Formula equation={String.raw`E[S]=E[N]E[X]`} label={t("Expected aggregate loss factors under independence of N and identically distributed severities.", "امید خسارت کل تحت استقلال N و شدت‌های هم‌توزیع به حاصل‌ضرب دو امید تجزیه می‌شود.")} /><Formula equation={String.raw`\operatorname{Var}(S)=E[N]\operatorname{Var}(X)+\operatorname{Var}(N)E[X]^2`} label={t("Aggregate variance contains separate severity and frequency components.", "واریانس خسارت کل دو مؤلفه‌ی جداگانه‌ی شدت و فراوانی دارد.")} /></div>
-      <Notice kind="warning" title={t("Grid step h changes the numerical result", "گام شبکه‌ی h نتیجه‌ی عددی را تغییر می‌دهد")}>{t("Panjer and FFT require a discretized severity distribution. A coarser h is faster but can distort the aggregate tail; represented probability mass and truncation error must be checked.", "پانژر و FFT به توزیع شدت گسسته نیاز دارند. h بزرگ‌تر سریع‌تر است اما می‌تواند دنباله‌ی خسارت کل را تحریف کند؛ جرم احتمال نمایش‌داده‌شده و خطای برش باید کنترل شوند.")}</Notice>
-      <Contributor names={contributors} files="Sections 3.5–3.10" summary={t("The submitted Panjer, FFT, approximation, policy, fitting, and stop-loss work was consolidated into one normalized library with explicit assumptions and corrected sparse-vector behavior.", "کارهای ارائه‌شده درباره‌ی پانژر، FFT، تقریب، بیمه‌نامه، برازش و مازاد خسارت در یک کتابخانه‌ی نرمال‌شده با فرض‌های صریح و رفتار اصلاح‌شده‌ی بردار تنک یکپارچه شده‌اند.")} />
+      {coverage === "total" ? <section className="panel">
+        <div className="panel-heading"><div><ResultTag tone="slate">{t("Stratified combined book", "پرتفوی ترکیبی لایه‌بندی‌شده")}</ResultTag><h2>{t("Add coverage aggregates, not unlike event counts", "جمع خسارت‌های پوششی، نه شمارش رویدادهای ناهمگون")}</h2><p>{t("Own-damage and liability retain separate frequencies and severities before their aggregate losses are added.", "بدنه و شخص ثالث پیش از جمع خسارت کل، فراوانی و شدت جداگانه‌ی خود را حفظ می‌کنند.")}</p></div></div>
+        <div className="reconciliation-table" role="table" aria-label="collective component identity">
+          <div role="row"><span>{t("Own damage", "بدنه")} · <InlineMath equation={String.raw`E[N]E[X]`} /></span><strong>{money(ownExpected)}</strong></div>
+          <div role="row"><span>{t("Third-party liability", "شخص ثالث")} · <InlineMath equation={String.raw`E[N]E[X]`} /></span><strong>{money(liabilityExpected)}</strong></div>
+          <div role="row"><span>{t("Component sum", "جمع اجزا")}</span><strong>{money(ownExpected + liabilityExpected)}</strong></div>
+          <div role="row"><span>{t("Empirical aggregate-loss mean", "میانگین تجربی خسارت کل")}</span><strong>{money(data.summary.mean_payout)}</strong></div>
+        </div>
+      </section> : null}
+
+      <div className="formula-grid"><Formula equation={String.raw`S=\sum_{i=1}^{N}X_i`} label={t("The count is the number of policy claims, and each severity belongs to that same claim population.", "تعداد، شمار پرونده‌های خسارت بیمه‌نامه‌ای است و هر شدت پرداختی به همان جامعه‌ی خسارت تعلق دارد.")} /><Formula equation={String.raw`S_{\mathrm{total}}=S_{\mathrm{OD}}+S_{\mathrm{TPL}}`} label={t("The combined portfolio adds separately modeled own-damage and liability aggregate losses.", "پرتفوی ترکیبی خسارت‌های کل بدنه و شخص ثالث را که جدا مدل شده‌اند جمع می‌کند.")} hint={t("Stratified aggregation", "تجمیع لایه‌بندی‌شده")} /></div>
+      <Notice kind="success" title={t("Frequency and severity use matching units", "فراوانی و شدت از واحدهای متناظر استفاده می‌کنند")}>{t("For each selected claim population, claim frequency and matching claim severity reconcile the collective expected-loss identity to the empirical mean aggregate paid loss.", "برای هر جامعه‌ی خسارت انتخاب‌شده، فراوانی خسارت و شدت متناظر آن، اتحاد امید خسارت جمعی را با میانگین تجربی خسارت کل پرداختی تطبیق می‌دهند.")}</Notice>
+      {apiError ? <Notice kind="warning" title={t("Authoritative API unavailable", "API مرجع در دسترس نیست")}>{t("The histograms remain direct data views, but fitted and reconciled metrics require the Python service.", "هیستوگرام‌ها همچنان نمایش مستقیم داده‌اند، اما سنجه‌های برازش‌شده و تطبیق‌یافته به سرویس پایتون نیاز دارند.")}</Notice> : null}
+      <Contributor names={contributors} files="3.5.ipynb · 3.6.ipynb · 3.7.ipynb · Section_3.8.py · Section_3.10.py" summary={t("The chapter methods now operate on matching coverage-specific claim counts and severities; textbook numerical routes remain explicitly separate from the empirical portfolio result.", "روش‌های فصل اکنون روی تعداد و شدت متناظر خسارت‌های مختص پوشش کار می‌کنند؛ مسیرهای عددی کتابی نیز صریحاً از نتیجه‌ی تجربی پرتفوی جدا هستند.")} />
     </div>
   );
 }

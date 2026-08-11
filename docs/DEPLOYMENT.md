@@ -22,9 +22,8 @@ The public web container is the only published service. Its `/api/*` route forwa
 - Send container logs to the homelab log destination without recording request bodies.
 - Pin the deployed image digest and record the source checksum from `/api/source`.
 - Run the reconciliation readiness check after every rollout.
-- Keep the original CSV outside writable container volumes.
+- Ship the checksum-locked v2 month CSV and its generated entity tables read-only in the image; regeneration is an explicit build or maintenance step, not a runtime write.
 
 ## Rollback
 
-Retain the prior web and API image digests. If readiness or the classroom walkthrough fails, restore both previous digests together, recreate the two services, and verify `/api/readiness` before restoring proxy traffic. Data are immutable and no database or persistent user state needs migration.
-
+Retain the prior web and API image digests. If readiness or the classroom walkthrough fails, restore both previous digests together, recreate the two services, and verify `/api/readiness` before restoring proxy traffic. The released v2 data artifacts are checksum-locked and no database or persistent user state needs migration.

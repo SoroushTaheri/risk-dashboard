@@ -2,19 +2,41 @@
 
 An interactive final project for the Risk Theory course in the M.Sc. Actuarial Sciences program at Shahid Beheshti University, Spring 1405.
 
-The laboratory follows one synthetic motor insurer through portfolio lineage, risk measures, utility and reinsurance, individual and collective aggregate-loss models, and finite-horizon ruin. Results are explicitly labeled as source, reconstructed, empirical, fitted, approximate, simulated, or textbook scenarios.
+The laboratory follows one synthetic motor insurer through portfolio lineage, risk measures, utility and reinsurance, individual and collective aggregate-loss models, and finite-horizon ruin. The interface is bilingual in English and Persian, and each calculation states its model, unit, assumptions, and academic provenance.
 
-The interface is fully bilingual in English and Persian. Each chapter view names its course reference, shows mathematical symbols beside adjustable parameters, explains how its charts implement the textbook formulas, and credits the students whose work contributes to the displayed calculations. The Persian risk-measures source is identified throughout as **Chapter 2 - Dr. Payandeh**.
+## Data contract v2
 
-## Integrity first
+`../Students Work/Data/insurance_simulated_data.csv` is the authoritative derived summary of 1,000 synthetic monthly observations for one stationary portfolio. `M0001`–`M1000` preserve month order, but they are not real calendar dates and do not imply seasonality. Amounts are synthetic Spring 1405 **million tomans**.
 
-`../Students Work/Data/insurance_simulated_data.csv` is authoritative and immutable. The generator assigns `M0001`–`M1000` identifiers without inventing dates, reconstructs deterministic accident/claim/policy/exposure companions, and writes a reconciliation report. The API refuses derived data unless every critical check passes.
+The generator creates entities before aggregates:
 
-Original student files are never imported as production code. Ported modules retain academic-provenance headers, and `provenance/contributions.json` maps contributors, source evidence, adaptations, and integrated modules.
+`10,000 vehicles → 17,000 separate policies → physical accidents → compatible claims → paid-loss components → month summaries`
+
+- Every vehicle has exactly one third-party liability policy.
+- Exactly 7,000 vehicles also have a separate own-damage policy.
+- No policy record combines the products.
+- One accident may trigger claims under multiple distinct policies.
+- Property, bodily, deductibles, policy limits, eligible own-damage excess, and final uncovered property excess are explicit.
+- Uncovered amounts never enter insurer-paid loss.
+- `Total_Loss_Cases` was removed because it had no supported coverage or payout meaning.
+
+The superseded student CSV is preserved by checksum and audit statistics in `provenance/adaptation-notes/data-model-v2.md`. Its useful broad frequency and corrected-unit severity shape are retained only as calibration targets. The v2 source checksum, schema, parameters, seed, and calibration results are recorded under `data/manifests/`.
+
+Readiness fails unless policy separation, claim coverage compatibility, accident links, limits, deductibles, aggregate identities, deterministic regeneration, and ±5% calibration tolerances all pass.
+
+## Calculations
+
+- Risk measures, utility, and reinsurance use month-level insurer-paid losses selectable by total, own-damage, or liability coverage.
+- Individual risk uses generated coverage-specific policy probabilities and benefits. Its shared-accident view preserves dependence between separate contracts.
+- Collective risk pairs claim frequency with claim-level severity. The combined book adds separately modeled own-damage and liability aggregate losses.
+- Ruin resamples the same retained month loss distribution and uses the same premium basis as reinsurance.
+- Python/FastAPI is the authoritative calculation layer; the browser does not invent proxy variance or quantile multipliers.
+
+The API and data contract are version 2 (generator revision 2.1.0). Use `/api/portfolio/month/{id}`. The obsolete `/api/portfolio/scenario/{id}` endpoint returns HTTP 410 with migration guidance.
 
 ## Local development
 
-Requirements: Node 22.19+, Python 3.11+ (3.13 tested), and Docker for the production rehearsal.
+Requirements: Node 22.19+ and Python 3.11+.
 
 ```powershell
 python -m venv .venv
@@ -24,25 +46,26 @@ npm ci
 npm run dev
 ```
 
-Run FastAPI separately when exercising live analytical endpoints:
+Run FastAPI separately for live analytical endpoints:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --reload --port 8000
 ```
 
-The dashboard is at `http://localhost:3000`; OpenAPI is at `http://localhost:8000/docs`. Scenario controls write shareable parameters into each page URL.
+The dashboard is at `http://localhost:3000`; OpenAPI is at `http://localhost:8000/docs`.
 
 ## Verification
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
+npm exec tsc -- --noEmit
 npm run lint
 npm run build
 npm test
 ```
 
-Python tests cover deterministic regeneration, lineage, exact reconciliation, VaR/TVaR properties, utility and stop-loss identities, convolution, Panjer/FFT agreement, moment checks, heavy-tail refusal, ruin monotonicity, API schemas, and simulation limits.
+Tests cover deterministic regeneration, entity compatibility, limits and deductibles, exact month reconciliation, calibration, coverage-selectable API results, individual-risk consistency, the collective identity `E[S] = E[N]E[X]` on matching claim units, retained-loss ruin inputs, and rendered routes.
 
 ## Containers
 
-`docker compose up --build` starts a single public web origin and an internal FastAPI service. See `docs/DEPLOYMENT.md` for the local reverse-proxy rehearsal, security checklist, and rollback notes. No public deployment is performed by this project.
+`docker compose up --build` is reserved for a later local runtime rehearsal. See `docs/DEPLOYMENT.md`. No public deployment is performed by this implementation.

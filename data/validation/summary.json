@@ -3,8 +3,49 @@
   "critical_checks_pass": true,
   "months_checked": 1000,
   "failed_months": [],
-  "source_sha256": "51f3c6760f42acbe76dda42ed2ccfac04f744e32c97d93a446ea51b9438ecc8f",
-  "generator_version": "1.0.0",
-  "max_absolute_difference": 1.862645149230957e-09,
-  "max_relative_difference": 2.9936512570606903e-16
+  "source_sha256": "277b20e8eb55e0c656b9ef524d3b4bfb42d59c20116e83ad6d0b8d2f83e039e6",
+  "generator_version": "2.1.0",
+  "entity_checks": {
+    "exactly_one_liability_policy_per_vehicle": true,
+    "separate_own_damage_policies": true,
+    "no_combined_policy": true,
+    "claim_policy_coverage_compatible": true,
+    "claim_role_vehicle_links_valid": true,
+    "claim_component_identities_valid": true,
+    "all_claims_link_to_accidents": true,
+    "nonzero_limit_excess_examples": true
+  },
+  "calibration": {
+    "mean_accidents": {
+      "target": 99.569,
+      "actual": 100.337,
+      "relative_difference": 0.0077132440819933645,
+      "passed": true
+    },
+    "mean_at_fault_own_claims": {
+      "target": 69.763,
+      "actual": 70.046,
+      "relative_difference": 0.004056591602998649,
+      "passed": true
+    },
+    "mean_liability_claims": {
+      "target": 39.955,
+      "actual": 40.494,
+      "relative_difference": 0.013490176448504698,
+      "passed": true
+    },
+    "mean_at_fault_own_paid": {
+      "target": 26.6042780543,
+      "actual": 26.86234057874081,
+      "relative_difference": 0.009700038614620432,
+      "passed": true
+    },
+    "mean_liability_paid": {
+      "target": 85.7787984616,
+      "actual": 85.54469341550211,
+      "relative_difference": 0.002729171430428612,
+      "passed": true
+    }
+  },
+  "maximum_absolute_difference": 2.2737367544323206e-13
 }

@@ -12,8 +12,8 @@ export function usePortfolio() {
   useEffect(() => {
     if (cache) return;
     Promise.all([
-      fetch("/data/monthly.json").then((response) => {
-        if (!response.ok) throw new Error("Monthly data are unavailable");
+      fetch("/data/months.json").then((response) => {
+        if (!response.ok) throw new Error("Month data are unavailable");
         return response.json();
       }),
       fetch("/data/summary.json").then((response) => {
@@ -30,4 +30,3 @@ export function usePortfolio() {
 
   return { data, error };
 }
-

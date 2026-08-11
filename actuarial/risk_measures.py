@@ -80,7 +80,7 @@ def evt_var_tvar(losses, confidence: float = 0.99, threshold_quantile: float = 0
             "scale": float(scale),
         },
         result_type="fitted",
-        assumptions=["Threshold exceedances follow a generalized Pareto distribution.", "Observations are independent synthetic months."],
+        assumptions=["Threshold exceedances follow a generalized Pareto distribution.", "Synthetic monthly portfolio losses are identically distributed draws from the stationary model."],
         convergence="converged",
         message="Tail estimates are sensitive to the selected threshold.",
     )
@@ -115,6 +115,5 @@ def bootstrap_var(losses, confidence: float = 0.95, replications: int = 400, see
             "replications": replications,
         },
         result_type="simulated",
-        assumptions=["Non-parametric bootstrap of independent monthly observations."],
+        assumptions=["Non-parametric bootstrap of the synthetic monthly portfolio-loss sample."],
     )
-

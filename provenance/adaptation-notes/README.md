@@ -1,6 +1,5 @@
 # Adaptation notes
 
-The files in `Students Work/` are immutable academic submissions. Production modules preserve the submitted concepts while adding typed inputs, deterministic random generators, mathematical domain checks, normalized probability masses, reconciliation, and tests. Each module contains an academic-provenance header naming the original file and contributors.
+Student notebooks, scripts, and reports remain immutable academic submissions. The specifically approved motor-insurance CSV is the exception: its ambiguous aggregate was audited by checksum and replaced with the authoritative entity-first v2 month summary. Production modules preserve submitted concepts while adding typed inputs, deterministic generators, mathematical domain checks, reconciliation, and tests. See `data-model-v2.md` for the exact rationale and retained evidence.
 
-The dashboard distinguishes source, reconstructed, empirical, fitted, approximate, simulated, and textbook-scenario results. Reconstructed claim and policy records are modeling companions, not observations. Corrections are integration work and do not alter the original submissions.
-
+The dashboard distinguishes source, reconstructed, empirical, fitted, approximate, simulated, and textbook results. The corrected `M0001`–`M1000` rows are synthetic monthly observations derived from entity tables, not market observations. Corrections are integration work and do not alter the original submissions except for the explicitly approved motor-insurance CSV.

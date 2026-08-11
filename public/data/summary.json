@@ -1,11 +1,87 @@
 {
   "months": 1000,
-  "total_payout": 5196784971.509382,
-  "mean_payout": 5196784.971509382,
-  "p95_payout": 9522956.595818497,
-  "max_payout": 31716028.316587504,
-  "source_sha256": "51f3c6760f42acbe76dda42ed2ccfac04f744e32c97d93a446ea51b9438ecc8f",
+  "vehicles": 10000,
+  "third_party_policies": 10000,
+  "own_damage_policies": 7000,
+  "total_policies": 17000,
+  "total_accidents_across_months": 100337,
+  "total_claims_across_months": 110916,
+  "at_fault_own_damage_claims_across_months": 70046,
+  "injured_party_excess_claims_across_months": 376,
+  "liability_claims_across_months": 40494,
+  "own_damage_paid_across_months": 1912200.1632503746,
+  "liability_paid_across_months": 3464046.815167351,
+  "uncovered_property_excess_across_months": 191199.51528640385,
+  "months_with_uncovered_property_excess": 925,
+  "mean_accidents": 100.337,
+  "mean_claims": 110.916,
+  "mean_payout": 5376.2469784177265,
+  "p95_payout": 6871.712567396261,
+  "max_payout": 8659.413194364013,
+  "source_sha256": "277b20e8eb55e0c656b9ef524d3b4bfb42d59c20116e83ad6d0b8d2f83e039e6",
   "reconciliation_status": "pass",
-  "max_relative_difference": 2.9936512570606903e-16,
-  "generator_version": "1.0.0"
+  "generator_version": "2.1.0",
+  "monetary_unit": "synthetic Spring 1405 million tomans",
+  "policy_models": {
+    "all:all": {
+      "policy_count": 17000,
+      "mean_claim_probability": 0.0065242941176470596,
+      "mean_paid_loss": 59.64957211519882
+    },
+    "all:standard": {
+      "policy_count": 10629,
+      "mean_claim_probability": 0.006496660080910717,
+      "mean_paid_loss": 59.51746960132374
+    },
+    "all:preferred": {
+      "policy_count": 4197,
+      "mean_claim_probability": 0.006529187514891589,
+      "mean_paid_loss": 60.15526878271622
+    },
+    "all:commercial": {
+      "policy_count": 2174,
+      "mean_claim_probability": 0.006649954001839927,
+      "mean_paid_loss": 59.319171336177554
+    },
+    "own_damage:all": {
+      "policy_count": 7000,
+      "mean_claim_probability": 0.010059857142857145,
+      "mean_paid_loss": 27.161660716354287
+    },
+    "own_damage:standard": {
+      "policy_count": 4371,
+      "mean_claim_probability": 0.010021047815145276,
+      "mean_paid_loss": 27.0630827817822
+    },
+    "own_damage:preferred": {
+      "policy_count": 1745,
+      "mean_claim_probability": 0.010071633237822352,
+      "mean_paid_loss": 27.346044771604586
+    },
+    "own_damage:commercial": {
+      "policy_count": 884,
+      "mean_claim_probability": 0.010228506787330319,
+      "mean_paid_loss": 27.285115439886876
+    },
+    "third_party_liability:all": {
+      "policy_count": 10000,
+      "mean_claim_probability": 0.004049400000000001,
+      "mean_paid_loss": 82.39111009439
+    },
+    "third_party_liability:standard": {
+      "policy_count": 6258,
+      "mean_claim_probability": 0.004034995206136146,
+      "mean_paid_loss": 82.1857541631991
+    },
+    "third_party_liability:preferred": {
+      "policy_count": 2452,
+      "mean_claim_probability": 0.0040081566068515505,
+      "mean_paid_loss": 83.50441066664355
+    },
+    "third_party_liability:commercial": {
+      "policy_count": 1290,
+      "mean_claim_probability": 0.004197674418604652,
+      "mean_paid_loss": 81.27119103565116
+    }
+  }
 }

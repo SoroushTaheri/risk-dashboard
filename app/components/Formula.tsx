@@ -1,19 +1,33 @@
 "use client";
 
 import katex from "katex";
-import { tr, useLanguage } from "./i18n";
+import type { ReactNode } from "react";
 
-export function Formula({ equation, label, hint }: { equation: string; label: string; hint?: string }) {
-  const { language } = useLanguage();
-  const html = katex.renderToString(equation, { throwOnError: false, output: "htmlAndMathml" });
+function renderMath(equation: string, displayMode: boolean) {
+  return katex.renderToString(equation, {
+    displayMode,
+    output: "htmlAndMathml",
+    throwOnError: true,
+  });
+}
+
+export function InlineMath({ equation, className = "" }: { equation: string; className?: string }) {
   return (
-    <details className="formula-card">
-      <summary>
-        <span dangerouslySetInnerHTML={{ __html: html }} aria-label={label} />
-        <span className="formula-open">{tr(language, "Theory & assumptions", "نظریه و فرض‌ها")}</span>
-      </summary>
-      <p>{label}</p>
-      {hint ? <p className="persian-hint" lang="fa" dir="rtl">{hint}</p> : null}
-    </details>
+    <span
+      className={`inline-math ${className}`.trim()}
+      dir="ltr"
+      dangerouslySetInnerHTML={{ __html: renderMath(equation, false) }}
+    />
+  );
+}
+
+export function Formula({ equation, label, hint }: { equation: string; label: ReactNode; hint?: string }) {
+  const html = renderMath(equation, true);
+  return (
+    <article className="formula-card">
+      <div className="formula-expression" dir="ltr" dangerouslySetInnerHTML={{ __html: html }} />
+      {hint ? <p className="formula-title">{hint}</p> : null}
+      <p className="formula-description">{label}</p>
+    </article>
   );
 }

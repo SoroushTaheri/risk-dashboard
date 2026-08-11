@@ -41,7 +41,7 @@ def fit_frequency(counts, model: str = "poisson") -> ActuarialResult:
     return ActuarialResult(
         values={"model": model, "mean": mean, "variance": variance, "dispersion_index": dispersion, "parameters": parameters},
         result_type="fitted",
-        assumptions=["Monthly counts are independent and identically distributed synthetic observations."],
+        assumptions=["Synthetic monthly claim counts are identically distributed draws from the stationary portfolio model."],
         message=warning,
         convergence="moment_fit",
     )
@@ -150,4 +150,3 @@ def simulate_compound_poisson(
         assumptions=["Poisson frequency and independent lognormal severity."],
         convergence="fixed_size_monte_carlo",
     )
-

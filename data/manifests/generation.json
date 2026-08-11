@@ -1,9 +1,121 @@
 {
-  "generator_version": "1.0.0",
+  "contract_version": 2,
+  "generator_version": "2.1.0",
+  "rng_namespace_version": "2.0.0",
   "master_seed": 1405,
-  "record_label": "reconstructed",
-  "overlap_rule": "Seeded uniform integer within the mathematically feasible overlap interval.",
-  "total_loss_rule": "Total_Loss_Cases is a seeded subset of monthly accidents; the source does not document its relationship to coverages.",
-  "claim_severity_rule": "Positive lognormal-shaped own-damage weights and Pareto-shaped third-party weights are normalized to exact source totals.",
-  "policy_rule": "Synthetic risk weights allocate conditioned events without changing source counts or amounts."
+  "month_count": 1000,
+  "vehicle_count": 10000,
+  "third_party_liability_policy_count": 10000,
+  "own_damage_policy_count": 7000,
+  "injured_party_population": "mixed portfolio and external market",
+  "in_portfolio_injured_probability": 0.2,
+  "liability_claim_probability_per_accident": 0.4,
+  "monetary_unit": "synthetic Spring 1405 million tomans",
+  "portfolio_parameters": {
+    "own_damage_policy_share": 0.7,
+    "segment_probabilities": {
+      "standard": 0.62,
+      "preferred": 0.25,
+      "commercial": 0.13
+    },
+    "vehicle_risk_score": {
+      "distribution": "lognormal",
+      "log_mean": 0.0,
+      "log_sigma": 0.34,
+      "minimum": 0.4,
+      "maximum": 3.2
+    },
+    "insured_value": {
+      "distribution": "lognormal",
+      "mean": 850.0,
+      "log_sigma": 0.55,
+      "minimum": 250.0,
+      "maximum": 3500.0
+    },
+    "own_damage_deductible": 5.0,
+    "liability_property_limits": {
+      "values": [
+        100.0,
+        200.0,
+        400.0
+      ],
+      "probabilities": [
+        0.25,
+        0.55,
+        0.2
+      ]
+    },
+    "liability_bodily_limits": {
+      "values": [
+        1000.0,
+        1500.0
+      ],
+      "probabilities": [
+        0.7,
+        0.3
+      ]
+    }
+  },
+  "event_and_severity_parameters": {
+    "accident_frequency": {
+      "distribution": "Poisson",
+      "mean": 100.0
+    },
+    "at_fault_own_damage": {
+      "distribution": "lognormal",
+      "gross_mean": 31.6,
+      "log_sigma": 0.595
+    },
+    "liability_property_presence_probability": 0.9,
+    "liability_property": {
+      "distribution": "lognormal",
+      "gross_mean": 70.0,
+      "log_sigma": 0.8
+    },
+    "liability_bodily_presence_probability": 0.15,
+    "liability_bodily": {
+      "distribution": "Pareto type I",
+      "shape": 2.4,
+      "gross_mean": 150.0
+    }
+  },
+  "claim_rules": [
+    "Every policy covers exactly one product.",
+    "One physical accident may create claims under separate policies.",
+    "Liability property and bodily components respect their own policy limits.",
+    "Eligible property excess may create a separate injured-party own-damage claim.",
+    "Uncovered amounts are never included in insurer-paid loss."
+  ],
+  "calibration": {
+    "mean_accidents": {
+      "target": 99.569,
+      "actual": 100.337,
+      "relative_difference": 0.0077132440819933645,
+      "passed": true
+    },
+    "mean_at_fault_own_claims": {
+      "target": 69.763,
+      "actual": 70.046,
+      "relative_difference": 0.004056591602998649,
+      "passed": true
+    },
+    "mean_liability_claims": {
+      "target": 39.955,
+      "actual": 40.494,
+      "relative_difference": 0.013490176448504698,
+      "passed": true
+    },
+    "mean_at_fault_own_paid": {
+      "target": 26.6042780543,
+      "actual": 26.86234057874081,
+      "relative_difference": 0.009700038614620432,
+      "passed": true
+    },
+    "mean_liability_paid": {
+      "target": 85.7787984616,
+      "actual": 85.54469341550211,
+      "relative_difference": 0.002729171430428612,
+      "passed": true
+    }
+  }
 }

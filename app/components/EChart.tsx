@@ -21,6 +21,7 @@ export function EChart({ option, label, height = 310 }: { option: EChartsCoreOpt
         charts.BarChart,
         charts.LineChart,
         charts.PieChart,
+        charts.ScatterChart,
         components.GridComponent,
         components.LegendComponent,
         components.MarkLineComponent,

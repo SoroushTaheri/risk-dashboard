@@ -7,7 +7,7 @@
       "names": ["علی تیموری"],
       "source_files": ["Students Work/Data/insurance_simulated_data.csv"],
       "modules": ["actuarial/data_pipeline.py"],
-      "adaptations": "Immutable ingestion, deterministic companion reconstruction, and reconciliation checks."
+      "adaptations": "The ambiguous aggregate was audited and superseded by the approved deterministic entity-first v2 simulation. Its broad frequency and corrected-unit severity profile remain calibration targets; the old checksum and defects are preserved in the adaptation record."
     },
     {
       "chapter": "Chapter 2 - Dr. Payandeh — Risk measures",

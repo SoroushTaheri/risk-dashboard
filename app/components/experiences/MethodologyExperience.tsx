@@ -1,74 +1,57 @@
 "use client";
 
-import { CheckCircle2, CircleDot, FileCheck2, GitBranch, LockKeyhole, Users } from "lucide-react";
-import { tr, useLanguage } from "../i18n";
+import { CheckCircle2, CircleDot, FileCheck2, GitBranch, LockKeyhole, ShieldCheck, Users } from "lucide-react";
 import type { PortfolioData } from "../types";
-import { Notice, PanelCredit, ReferenceBand, ResultTag, formatMoney } from "../ui";
+import { Contributor, Notice, PanelCredit, ResultTag, formatMoney } from "../ui";
+import { tr, useLanguage } from "../i18n";
+
+const contributors = [
+  { names: "علی تیموری، سروش طاهری", files: "insurance_simulated_data.csv · insurance_ruin_analysis.py" },
+  { names: "ابوالفضل اقراری، حامد اشراقی", files: "Chapter1.ipynb.json · insurance_ruin_analysis.py" },
+  { names: "نجمه زارع", files: "پیچش.R · approximation.R" },
+  { names: "محمد مهدوی نسب، علی جهانبان، محمدرضا سعیدخانی، محمد اشکوری", files: "Chapter 3 submissions" },
+  { names: "محمدرضا سعیدخانی، محمد مهدوی نسب، علی جهانبان، محمد اشکوری، نجمه زارع", files: "Chapter 2 - Dr. Payandeh submissions" },
+];
 
 export function MethodologyExperience({ data }: { data: PortfolioData }) {
   const { language } = useLanguage();
   const t = (en: string, fa: string) => tr(language, en, fa);
-  const resultTypes = [
-    [t("Source data", "داده‌ی منبع"), t("Direct calculation from the immutable supplied CSV.", "محاسبه‌ی مستقیم از CSV منبع که تغییر نمی‌کند."), "blue"],
-    [t("Reconstructed", "بازسازی‌شده"), t("Deterministic companion accidents, claims, policies, or exposures.", "رکوردهای همراهِ قطعی برای حادثه، خسارت، بیمه‌نامه یا مواجهه."), "green"],
-    [t("Empirical", "تجربی"), t("A statistic calculated from the supplied or reconstructed sample.", "آماره‌ای که از نمونه‌ی منبع یا بازسازی‌شده محاسبه می‌شود."), "blue"],
-    [t("Fitted", "برازش‌شده"), t("A parametric model estimated from a clearly identified sample.", "مدل پارامتری برآوردشده از نمونه‌ای که صریحاً مشخص شده است."), "green"],
-    [t("Approximate", "تقریبی"), t("A moment approximation, numerical inversion, recursion, or theoretical bound.", "تقریب گشتاوری، وارون‌سازی عددی، بازگشت یا کران نظری."), "amber"],
-    [t("Simulated", "شبیه‌سازی‌شده"), t("A fixed-seed Monte Carlo calculation with sampling uncertainty.", "محاسبه‌ی مونت‌کارلو با بذر ثابت و عدم‌قطعیت نمونه‌گیری."), "red"],
-    [t("Textbook scenario", "سناریوی کتاب"), t("A controlled example used when raw portfolio assumptions do not satisfy a theorem.", "مثال کنترل‌شده برای زمانی که فرض‌های پرتفوی خام شرایط یک قضیه را برآورده نمی‌کنند."), "slate"],
-  ] as const;
-  const contributors = [
-    { chapter: t("Source portfolio", "پرتفوی منبع"), names: "علی تیموری", files: "insurance_simulated_data.csv", work: t("Synthetic aggregate motor-insurance data", "داده‌های مصنوعی تجمیعی بیمه‌ی خودرو") },
-    { chapter: t("Chapter 2 - Dr. Payandeh", "فصل ۲ - دکتر پاینده"), names: "محمدرضا سعیدخانی، محمد مهدوی نسب، علی جهانبان، محمد اشکوری، نجمه زارع", files: "Risk_Measures_and_Risk_Comparison.py · دلتا گاما.R", work: t("VaR, risk comparison, and delta–gamma concepts", "VaR، مقایسه‌ی ریسک و مفاهیم دلتا–گاما") },
-    { chapter: t("Modern Ch. 1 · Utility", "فصل ۱ مدرن · مطلوبیت"), names: "ابوالفضل اقراری، حامد اشراقی", files: "Chapter1.ipynb.json", work: t("Utility, certainty equivalents, and acceptable premiums", "مطلوبیت، معادل قطعی و حق‌بیمه‌ی قابل‌قبول") },
-    { chapter: t("Modern Ch. 2 · Individual risk", "فصل ۲ مدرن · ریسک انفرادی"), names: "نجمه زارع", files: "پیچش.R · approximation.R", work: t("Convolution and moment approximations", "پیچش و تقریب‌های گشتاوری") },
-    { chapter: t("Modern Ch. 3 · Collective risk", "فصل ۳ مدرن · ریسک جمعی"), names: "محمد مهدوی نسب، علی جهانبان، محمدرضا سعیدخانی، محمد اشکوری", files: "Sections 3.5–3.10", work: t("Panjer, FFT, fitting, approximations, and stop-loss", "پانژر، FFT، برازش، تقریب‌ها و مازاد خسارت") },
-    { chapter: t("Modern Ch. 4 · Ruin", "فصل ۴ مدرن · ورشکستگی"), names: "ابوالفضل اقراری، حامد اشراقی", files: "insurance_ruin_analysis.py", work: t("Finite-horizon ruin analysis", "تحلیل ورشکستگی در افق محدود") },
-  ];
-
   return (
-    <div className="experience-stack methodology">
-      <ReferenceBand source={t("Course books, student submissions, and immutable portfolio data", "کتاب‌های درس، کارهای دانشجویان و داده‌های تغییرناپذیر پرتفوی")} formula="source → reconstruction → model → labeled result">
-        {t("Every displayed number should identify its data origin, the chapter formula or numerical method used, the assumptions required, and the contributors whose work entered the calculation.", "هر عدد نمایش‌داده‌شده باید منشأ داده، فرمول فصل یا روش عددی، فرض‌های لازم و افرادی را مشخص کند که کارشان در محاسبه وارد شده است.")}
-      </ReferenceBand>
-
-      <div className="audit-banner">
-        <div className="audit-icon"><FileCheck2 size={28} /></div>
-        <div><ResultTag tone="green">{t("Reconciliation passed", "تطبیق داده‌ها تأیید شد")}</ResultTag><h2>{t("1,000 of 1,000 source months validated", "هر ۱۰۰۰ ماه مرجع اعتبارسنجی شدند")}</h2><p>{t(`The largest relative reconciliation difference is ${data.summary.max_relative_difference.toExponential(2)}. Derived data are checked before any chapter calculation uses them.`, `بیشترین اختلاف نسبی تطبیق ${data.summary.max_relative_difference.toExponential(2)} است. داده‌های مشتق‌شده پیش از استفاده در محاسبات هر فصل کنترل می‌شوند.`)}</p></div>
-        <dl><div><dt>{t("Generator", "مولد")}</dt><dd>v{data.summary.generator_version}</dd></div><div><dt>{t("Source checksum", "اثر انگشت منبع")}</dt><dd title={data.summary.source_sha256}>{data.summary.source_sha256.slice(0, 12)}…</dd></div><div><dt>{t("Portfolio payout", "پرداخت پرتفوی")}</dt><dd>{formatMoney(data.summary.total_payout, true, language)}</dd></div></dl>
-        <PanelCredit names="علی تیموری" role={t("Source portfolio used by the reconciliation report.", "پرتفوی منبع مورد استفاده در گزارش تطبیق.")} />
-      </div>
+    <div className="experience-stack">
+      <section className="method-hero panel">
+        <div><ResultTag tone="green">{t("Version 2 validation passed", "اعتبارسنجی نسخه‌ی ۲ تأیید شد")}</ResultTag><h2>{t("1,000 of 1,000 synthetic months validated", "هر ۱۰۰۰ ماه شبیه‌سازی‌شده اعتبارسنجی شدند")}</h2><p>{t("Entity links, policy coverage, component limits, payout identities, deterministic regeneration, and calibration must all pass before calculations are served.", "پیوند موجودیت‌ها، پوشش بیمه‌نامه، حدود اجزا، اتحادهای پرداخت، بازتولید قطعی و کالیبراسیون باید پیش از ارائه‌ی محاسبات همگی تأیید شوند.")}</p></div>
+        <dl><div><dt>{t("Generator", "مولد")}</dt><dd>v{data.summary.generator_version}</dd></div><div><dt>{t("Source checksum", "اثر انگشت منبع")}</dt><dd title={data.summary.source_sha256}>{data.summary.source_sha256.slice(0, 12)}…</dd></div><div><dt>{t("Mean monthly loss", "میانگین خسارت ماهانه")}</dt><dd>{formatMoney(data.summary.mean_payout, true, language)}</dd></div></dl>
+      </section>
 
       <div className="panel-grid equal">
         <section className="panel methodology-card">
-          <div className="panel-heading"><div><ResultTag tone="slate">{t("Data integrity contract", "قرارداد یکپارچگی داده")}</ResultTag><h2>{t("From a source row to chapter inputs", "از ردیف منبع تا ورودی فصل‌ها")}</h2><p>{t("No calendar dates are invented and no source value is overwritten.", "هیچ تاریخ تقویمی ساخته و هیچ مقدار منبع بازنویسی نمی‌شود.")}</p></div></div>
+          <div className="panel-heading"><div><ResultTag tone="slate">{t("Entity-first contract", "قرارداد مبتنی بر موجودیت")}</ResultTag><h2>{t("How a result is produced", "نتیجه چگونه تولید می‌شود")}</h2><p>{t("Monthly aggregates are derived from coherent vehicle, policy, accident, claim, and payment entities.", "مقادیر تجمیعی ماهانه از موجودیت‌های سازگار خودرو، بیمه‌نامه، حادثه، پرونده‌ی خسارت و پرداخت استخراج می‌شوند.")}</p></div></div>
           <ol className="method-list">
-            <li><span><LockKeyhole /></span><div><strong>{t("Lock the source", "قفل‌کردن منبع")}</strong><p>{t("Read-only ingestion records a SHA-256 checksum and the exact nine-column schema.", "ورود فقط‌خواندنی، اثر انگشت SHA-256 و ساختار دقیق نه‌ستونی را ثبت می‌کند.")}</p></div></li>
-            <li><span><CircleDot /></span><div><strong>{t("Allocate accidents", "تخصیص حادثه‌ها")}</strong><p>{t("A seeded feasible overlap reproduces own-damage and third-party counts exactly.", "هم‌پوشانی شدنی با بذر ثابت، تعداد بدنه و شخص ثالث را دقیقاً بازتولید می‌کند.")}</p></div></li>
-            <li><span><GitBranch /></span><div><strong>{t("Normalize claim severities", "نرمال‌سازی شدت خسارت")}</strong><p>{t("Lognormal-shaped own-damage and Pareto-shaped third-party weights reconcile to source totals.", "وزن‌های لگ‌نرمال‌مانند بدنه و پارتومانند شخص ثالث با جمع منبع تطبیق می‌یابند.")}</p></div></li>
-            <li><span><Users /></span><div><strong>{t("Link synthetic policies", "پیوند بیمه‌نامه‌های مصنوعی")}</strong><p>{t("Risk weights allocate events without changing the conditioned counts or amounts.", "وزن‌های ریسک رویدادها را بدون تغییر تعداد و مبلغ شرط‌شده تخصیص می‌دهند.")}</p></div></li>
-            <li><span><CheckCircle2 /></span><div><strong>{t("Gate every month", "کنترل هر ماه")}</strong><p>{t("Counts, means, totals, payout identities, seeds, and policy links must all pass.", "تعدادها، میانگین‌ها، جمع‌ها، اتحادهای پرداخت، بذرها و پیوند بیمه‌نامه باید همگی تأیید شوند.")}</p></div></li>
+            <li><span><Users /></span><div><strong>{t("Create the portfolio", "ساخت پرتفوی")}</strong><p>{t("Generate 10,000 vehicles, one liability policy each, and 7,000 separate own-damage policies.", "۱۰٬۰۰۰ خودرو، برای هر خودرو یک بیمه‌نامه‌ی شخص ثالث و ۷٬۰۰۰ بیمه‌نامه‌ی جداگانه‌ی بدنه تولید می‌شود.")}</p></div></li>
+            <li><span><CircleDot /></span><div><strong>{t("Generate physical accidents", "تولید حوادث فیزیکی")}</strong><p>{t("Each row is a synthetic monthly observation. M identifiers preserve its order, but do not claim real calendar dates or seasonality.", "هر ردیف یک مشاهده‌ی ماهانه‌ی شبیه‌سازی‌شده است. شناسه‌های M ترتیب را حفظ می‌کنند، اما تاریخ تقویمی واقعی یا فصل‌پذیری را ادعا نمی‌کنند.")}</p></div></li>
+            <li><span><GitBranch /></span><div><strong>{t("Create compatible claims", "ساخت خسارت‌های سازگار")}</strong><p>{t("One accident may invoke separate own-damage and liability policies; every claim references exactly one matching policy.", "یک حادثه می‌تواند بیمه‌نامه‌های جداگانه‌ی بدنه و شخص ثالث را فعال کند؛ هر خسارت دقیقاً به یک بیمه‌نامه‌ی متناظر پیوند دارد.")}</p></div></li>
+            <li><span><ShieldCheck /></span><div><strong>{t("Apply terms and limits", "اعمال شرایط و حدود")}</strong><p>{t("Property, bodily, deductibles, limits, eligible own-damage excess, and final uncovered amounts remain explicit.", "مالی، جانی، فرانشیز، حدود تعهد، مازاد واجد شرایط بدنه و مبلغ نهایی پوشش‌داده‌نشده صریح باقی می‌مانند.")}</p></div></li>
+            <li><span><CheckCircle2 /></span><div><strong>{t("Derive and gate aggregates", "استخراج و کنترل تجمیع")}</strong><p>{t("Month rows are summed from paid claim components and are refused if any entity or amount identity fails.", "ردیف‌های ماه از اجزای خسارت پرداختی جمع می‌شوند و در صورت شکست هر هویت موجودیتی یا مبلغی رد می‌شوند.")}</p></div></li>
           </ol>
-          <PanelCredit names="علی تیموری" />
+          <PanelCredit names="علی تیموری، سروش طاهری" />
         </section>
+
         <section className="panel methodology-card">
-          <div className="panel-heading"><div><ResultTag tone="amber">{t("Known limitations", "محدودیت‌های شناخته‌شده")}</ResultTag><h2>{t("What the data support—and what they do not", "داده‌ها چه چیزی را پشتیبانی می‌کنند و چه چیزی را نه")}</h2><p>{t("These qualifications apply before interpreting any chart.", "این ملاحظات پیش از تفسیر هر نمودار اعمال می‌شوند.")}</p></div></div>
-          <div className="limitation-list"><article><strong>{t("Independent synthetic months", "ماه‌های مصنوعی مستقل")}</strong><p>{t("Row order supports identifiers and classroom experiments, not seasonality or historical forecasting.", "ترتیب ردیف‌ها برای شناسه و آزمایش درسی است، نه فصلی‌بودن یا پیش‌بینی تاریخی.")}</p></article><article><strong>{t("Reconstructed microdata", "ریز‌داده‌ی بازسازی‌شده")}</strong><p>{t("Accident, claim, and policy rows are deterministic companions, not observed records.", "ردیف‌های حادثه، خسارت و بیمه‌نامه همراهان قطعی‌اند، نه رکوردهای مشاهده‌شده.")}</p></article><article><strong>{t("Provisional total-loss link", "پیوند موقت خسارت کلی")}</strong><p>{t("Total_Loss_Cases is assigned as a seeded subset because its coverage relationship is undocumented.", "به دلیل مستندنبودن رابطه‌ی پوشش، Total_Loss_Cases به‌صورت زیرمجموعه‌ای با بذر ثابت تخصیص یافته است.")}</p></article><article><strong>{t("Heavy tails restrict theorems", "دنباله‌ی سنگین قضایا را محدود می‌کند")}</strong><p>{t("Positive-MGF methods are disabled for raw unbounded Pareto scenarios; finite-horizon simulation remains available.", "روش‌های نیازمند تابع مولد گشتاور مثبت برای پارتوی نامحدود خام غیرفعال‌اند؛ شبیه‌سازی افق محدود در دسترس می‌ماند.")}</p></article></div>
+          <div className="panel-heading"><div><ResultTag tone="amber">{t("Model contract", "قرارداد مدل")}</ResultTag><h2>{t("Core semantic rules", "قواعد معنایی اصلی")}</h2><p>{t("These rules keep policies, physical events, claim files, and insurer payments distinct throughout the laboratory.", "این قواعد بیمه‌نامه‌ها، رویدادهای فیزیکی، پرونده‌های خسارت و پرداخت‌های بیمه‌گر را در سراسر داشبورد از هم متمایز نگه می‌دارند.")}</p></div></div>
+          <div className="limitation-list"><article><strong>{t("Claims and payments", "پرونده و پرداخت")}</strong><p>{t("Every claim count corresponds to a compatible policy and an explicit insurer-paid amount.", "هر پرونده‌ی خسارت به یک بیمه‌نامه‌ی سازگار و مبلغ پرداختی صریح بیمه‌گر مربوط است.")}</p></article><article><strong>{t("Separate policy contracts", "قراردادهای بیمه‌ای جدا")}</strong><p>{t("Own-damage and third-party liability are separate contracts, even when one accident triggers both.", "بدنه و شخص ثالث قراردادهای جدا هستند، حتی اگر یک حادثه هر دو را فعال کند.")}</p></article><article><strong>{t("Matching collective units", "واحدهای متناظر مدل جمعی")}</strong><p>{t("Claim frequency is paired with claim severity; accident count remains a physical-event measure.", "فراوانی خسارت با شدت خسارت متناظر می‌شود؛ تعداد حادثه معیار رویداد فیزیکی باقی می‌ماند.")}</p></article><article><strong>{t("Monthly observations", "مشاهدات ماهانه")}</strong><p>{t("Every row is one synthetic month used consistently by all chapters; month identifiers are ordered but not real dates.", "هر ردیف یک ماه شبیه‌سازی‌شده است که همه‌ی فصل‌ها به‌طور یکسان استفاده می‌کنند؛ شناسه‌های ماه مرتب‌اند اما تاریخ واقعی نیستند.")}</p></article></div>
         </section>
       </div>
 
       <section className="panel">
-        <div className="panel-heading"><div><ResultTag tone="slate">{t("Reading key", "راهنمای خواندن")}</ResultTag><h2>{t("Result types used throughout the site", "نوع نتایج در سراسر سایت")}</h2><p>{t("Results with different evidential status are not presented as interchangeable.", "نتایج با وضعیت شواهد متفاوت به‌عنوان نتیجه‌ی قابل‌جایگزین ارائه نمی‌شوند.")}</p></div></div>
-        <div className="result-type-grid">{resultTypes.map(([name, description, tone]) => <article key={name}><ResultTag tone={tone}>{name}</ResultTag><p>{description}</p></article>)}</div>
+        <div className="panel-heading"><div><ResultTag tone="blue">{t("Academic provenance", "مشارکت‌کنندگان")}</ResultTag><h2>{t("Course contributions and production assumptions", "مشارکت‌های درسی و فرض‌های تولید")}</h2><p>{t("Frequency and severity calibration, conceptual references, and calculation contributions are documented with attribution.", "کالیبراسیون فراوانی و شدت، منابع مفهومی و مشارکت‌های محاسباتی با ذکر نام مستند شده‌اند.")}</p></div></div>
+        <div className="contributor-grid">{contributors.map((entry) => <Contributor key={entry.names} names={entry.names} files={entry.files} summary={t("Submitted course material retained as an attributed conceptual or calibration reference.", "محتوای درسی ارائه‌شده با ذکر نام به‌عنوان مرجع مفهومی یا کالیبراسیون حفظ شده است.")} />)}</div>
       </section>
 
-      <section className="panel credits-panel">
-        <div className="panel-heading"><div><ResultTag tone="blue">{t("Academic credit", "اعتبار علمی")}</ResultTag><h2>{t("Contributors by calculation area", "مشارکت‌کنندگان به تفکیک حوزه‌ی محاسبه")}</h2><p>{t("Original submissions remain unchanged. Integrated modules preserve matching source evidence and adaptation notes.", "کارهای اصلی بدون تغییر باقی مانده‌اند. ماژول‌های یکپارچه شواهد منبع و یادداشت‌های تطبیق متناظر را حفظ می‌کنند.")}</p></div></div>
-        <div className="credits-table" role="table" aria-label={t("Student contributions", "مشارکت دانشجویان")}>
-          <div className="credits-head" role="row"><span>{t("Reference area", "حوزه‌ی منبع")}</span><span>{t("Contributors", "مشارکت‌کنندگان")}</span><span>{t("Source files", "فایل‌های منبع")}</span><span>{t("Calculation contribution", "مشارکت محاسباتی")}</span></div>
-          {contributors.map((item) => <div className="credits-row" role="row" key={item.chapter}><strong>{item.chapter}</strong><span lang="fa" dir="rtl">{item.names}</span><code>{item.files}</code><span>{item.work}</span></div>)}
-        </div>
-      </section>
+      <div className="panel-grid equal">
+        <section className="panel"><div className="panel-heading"><div><ResultTag tone="green">{t("Data guarantees", "تضمین‌های داده")}</ResultTag><h2>{t("What readiness proves", "آمادگی چه چیزی را اثبات می‌کند")}</h2></div></div><div className="assumption-list"><p><FileCheck2 />{t("No combined policy and one liability policy per vehicle.", "نبود بیمه‌نامه‌ی ترکیبی و یک بیمه‌نامه‌ی شخص ثالث برای هر خودرو.")}</p><p><FileCheck2 />{t("Every claim links to a compatible policy and physical accident.", "هر خسارت به بیمه‌نامه‌ی سازگار و حادثه‌ی فیزیکی پیوند دارد.")}</p><p><FileCheck2 />{t("Paid components respect deductibles and policy limits.", "اجزای پرداختی فرانشیز و حدود تعهد را رعایت می‌کنند.")}</p><p><FileCheck2 />{t("Monthly amounts reconcile exactly and calibration remains within 5%.", "مبالغ ماهانه دقیقاً تطبیق و کالیبراسیون در محدوده‌ی ۵٪ باقی می‌ماند.")}</p></div></section>
+        <section className="panel"><div className="panel-heading"><div><ResultTag tone="slate">{t("Interpretation limits", "محدودیت‌های تفسیر")}</ResultTag><h2>{t("Synthetic, not market evidence", "شبیه‌سازی‌شده، نه شواهد بازار")}</h2></div></div><div className="assumption-list"><p><LockKeyhole />{t("Amounts are synthetic Spring 1405 million tomans, not calibrated prices or tariffs.", "مبالغ میلیون تومان شبیه‌سازی‌شده بهار ۱۴۰۵ هستند، نه قیمت یا تعرفه‌ی کالیبره‌شده.")}</p><p><LockKeyhole />{t("The 20% in-portfolio injured-party assumption is a teaching parameter.", "فرض ۲۰٪ زیان‌دیده‌ی داخل پرتفوی یک پارامتر آموزشی است.")}</p><p><LockKeyhole />{t("Heavy-tail theorems remain disabled where a positive MGF does not exist.", "قضایای دنباله‌سنگین در نبود تابع مولد گشتاور مثبت همچنان غیرفعال‌اند.")}</p></div></section>
+      </div>
+
       <Notice kind="info" title={t("Course context", "زمینه‌ی درس")}>{t("Final project for Risk Theory in the Master's of Actuarial Sciences program at Shahid Beheshti University, Spring Semester 1405. The site demonstrates representative principles and explicitly links each view to its course reference.", "پروژه‌ی پایانی درس نظریه ریسک در دوره‌ی کارشناسی ارشد علوم بیم‌سنجی دانشگاه شهید بهشتی، نیمسال بهار ۱۴۰۵. سایت اصول منتخب را نمایش می‌دهد و هر نما را صریحاً به منبع درسی آن پیوند می‌دهد.")}</Notice>
     </div>
   );
