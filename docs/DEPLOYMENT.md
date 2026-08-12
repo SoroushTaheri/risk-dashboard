@@ -1,6 +1,14 @@
-# Deployment readiness
+# Deployment
 
-This repository is prepared for a later homelab deployment but does not make DNS, TLS, router, firewall, or public-host changes.
+GitHub Actions validates the application and publishes two images after every
+push to `main`:
+
+- `ghcr.io/soroushtaheri/risk-dashboard-web:<commit-sha>`
+- `ghcr.io/soroushtaheri/risk-dashboard-api:<commit-sha>`
+
+The `latest` aliases are convenient for inspection, but production must use the
+immutable full commit SHA so the frontend and backend always move and roll back
+together.
 
 ## Local production rehearsal
 
@@ -12,11 +20,15 @@ This repository is prepared for a later homelab deployment but does not make DNS
 
 The public web container is the only published service. Its `/api/*` route forwards internally to FastAPI, so the browser sees one origin. Both containers use health checks and unprivileged users; the API has a read-only filesystem and bounded simulation schemas.
 
-## Homelab checklist
+## Vala production layout
 
-- Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin before building the web image.
-- Put the web service behind the existing reverse proxy; do not publish the API port.
-- Terminate TLS at the reverse proxy and redirect HTTP to HTTPS.
+- The managed Compose definition lives at `/srv/vala/deploy/risk-theory/compose.yaml`.
+- Root-only image configuration lives at `/etc/vala/risk-theory.env`.
+- Nginx is the only service publishing host port 80.
+- The CDN terminates TLS for `risk-theory.bluehour.cloud` and
+  `api.risk-theory.bluehour.cloud`; Vala serves HTTP to the CDN origin.
+- The web service keeps `/api/*` same-origin through its internal FastAPI proxy,
+  while the API hostname also exposes FastAPI directly.
 - Add proxy request-size, connection, and rate limits, especially for `/api/ruin` and `/api/collective-risk`.
 - Preserve the 100-second upstream timeout only for bounded simulations; ordinary requests should use a shorter timeout.
 - Send container logs to the homelab log destination without recording request bodies.

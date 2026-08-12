@@ -2,13 +2,11 @@ FROM python:3.13.5-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app
 WORKDIR /app
 RUN useradd --create-home --uid 10001 actuarial
-COPY dashboard/requirements.lock /app/requirements.lock
+COPY requirements.lock /app/requirements.lock
 RUN pip install --no-cache-dir -r /app/requirements.lock
-COPY dashboard /app
-COPY ["Students Work/Data/insurance_simulated_data.csv", "/Students Work/Data/insurance_simulated_data.csv"]
+COPY . /app
 RUN python scripts/generate_companion_data.py && chown -R actuarial:actuarial /app
 USER actuarial
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4)"
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--limit-concurrency", "100"]
-
