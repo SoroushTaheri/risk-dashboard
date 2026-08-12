@@ -1,6 +1,5 @@
 .git
 .codex-work
-.openai
 .env*
 .next
 .vinext
@@ -8,7 +7,6 @@
 .venv
 node_modules
 dist
-build
 deploy
 tmp
 __pycache__
