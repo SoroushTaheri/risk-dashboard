@@ -75,10 +75,10 @@ function DashboardContent({ initialView }: { initialView: ViewKey }) {
             );
           })}
         </nav>
-        <div className="sidebar-status">
+        {/* <div className="sidebar-status">
           <span className="status-dot pass" />
           <div><strong>{tr(language, "Risk Theory at a glance", "نظریه ریسک در یک نگاه")}</strong><small>{tr(language, "Concepts, charts, and practical examples", "مفاهیم، نمودارها و مثال‌های کاربردی")}</small></div>
-        </div>
+        </div> */}
       </aside>
       {open ? <button className="scrim" aria-label={tr(language, "Close navigation", "بستن فهرست")} onClick={() => setOpen(false)} /> : null}
 
