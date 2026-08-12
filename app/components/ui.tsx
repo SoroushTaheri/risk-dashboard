@@ -49,13 +49,30 @@ export function Notice({ kind = "info", title, children }: { kind?: "info" | "wa
   );
 }
 
-export function Contributor({ names, files, summary }: { names: string; files: string; summary: string }) {
+export function Contributor({ names, summary }: { names: string; summary: string }) {
   const { language } = useLanguage();
   return (
-    <aside className="contributor-panel">
-      <div><ResultTag tone="slate">{tr(language, "Academic provenance", "مشارکت‌کنندگان")}</ResultTag><strong lang="fa" dir="rtl">{names}</strong></div>
-      <p>{summary}</p>
-      <small>{files} · <a href="/methodology">{tr(language, "Full methodology notes", "یادداشت‌های کامل روش‌شناسی")}</a></small>
+    <aside className="contributor-panel" aria-labelledby="contributor-panel-title">
+      <header className="contributor-title">
+        {/* <ResultTag tone="slate">{tr(language, "Academic provenance", "سهم علمی پروژه")}</ResultTag> */}
+        <h2 id="contributor-panel-title">{tr(language, "Implementation and integration contributors", "مشارکت‌کنندگان")}</h2>
+      </header>
+      <div className="contributor-groups">
+        <section className="contributor-group">
+          <span>{tr(language, "Chapter/page implementation", "پیاده‌سازی روابط فصل")}</span>
+          <strong lang="fa" dir="rtl">{names}</strong>
+          <p>{summary}</p>
+        </section>
+        <section className="contributor-group">
+          <span>{tr(language, "Validation, fitting & integration", "توسعه داشبورد، اعتبارسنجی، تطابق و یکپارچه‌سازی")}</span>
+          <strong lang={language === "fa" ? "fa" : "en"} dir="auto">{tr(language, "Soroush Taheri", "سروش طاهری")}</strong>
+          <p>{tr(
+            language,
+            "Validated and fitted this implementation to the project's final dataset and Python API backend, then aligned and integrated it with the other students' implementations.",
+            "اعتبارسنجی و تطابق این پیاده‌سازی با داده‌های نهایی پروژه، انتقال و یکپارچه‌سازی با Backend، مصورسازی در Frontend، تطبیق و یکپارچه‌سازی پیاده‌سازی‌های افراد با پیاده‌سازی‌های دیگر دانشجویان.",
+          )}</p>
+        </section>
+      </div>
     </aside>
   );
 }

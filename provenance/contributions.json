@@ -7,42 +7,42 @@
       "names": ["علی تیموری"],
       "source_files": ["Students Work/Data/insurance_simulated_data.csv"],
       "modules": ["actuarial/data_pipeline.py"],
-      "adaptations": "The ambiguous aggregate was audited and superseded by the approved deterministic entity-first v2 simulation. Its broad frequency and corrected-unit severity profile remain calibration targets; the old checksum and defects are preserved in the adaptation record."
+      "adaptations": "The submitted 1,000-row motor aggregate supplied the original calibration target. The current portfolio page uses the approved deterministic entity-first v2 replacement: 10,000 vehicles, separate coverage-specific policies, physical accidents, compatible claim files and components, and exactly reconciled insurer-paid losses over 1,000 synthetic months. It presents selected-month metrics, coverage and triggered-policy decompositions, the full monthly loss distribution, and contract-to-payment lineage; the superseded rows are retained only as synthetic calibration and provenance evidence, not as market observations."
     },
     {
       "chapter": "Chapter 2 - Dr. Payandeh — Risk measures",
       "names": ["محمدرضا سعیدخانی", "محمد مهدوی نسب", "علی جهانبان", "محمد اشکوری", "نجمه زارع"],
       "source_files": ["Students Work/PCh2/files/Risk_Measures_and_Risk_Comparison.py", "Students Work/PCh2/files/دلتا گاما.R"],
       "modules": ["actuarial/risk_measures.py"],
-      "adaptations": "Validated empirical, normal, EVT, bootstrap, retention, and pedagogical delta-gamma framing."
+      "adaptations": "The submitted historical, Normal, and EVT-GPD VaR/TVaR work is applied consistently to the same 1,000 monthly aggregate insurer-paid-loss observations, with explicit tail conventions, EVT threshold checks, and the retained-loss transformation X_R=min(X,d). The Delta-Gamma submission is preserved as a separate hypothetical frequency-severity teaching example, not as a fourth estimator of the entity-first portfolio loss; the submitted autoregressive route is not used because the synthetic month indices are not a chronological time series."
     },
     {
       "chapter": "Modern Chapter 1 — Utility and insurance",
       "names": ["ابوالفضل اقراری", "حامد اشراقی"],
       "source_files": ["Students Work/Ch1/files/Chapter1.ipynb.json"],
       "modules": ["actuarial/utility_reinsurance.py"],
-      "adaptations": "Explicit utility parameters, stable certainty equivalents, domain checks, and shared retention rules."
+      "adaptations": "The raw notebook functions for utility, risk aversion, maximum premiums, and stop-loss insurance were rebuilt as validated finite-sample calculations over all 1,000 monthly paid-loss observations. The page compares exponential (CARA), logarithmic, and power utility at a common local absolute-risk-aversion level, enforces each wealth domain, solves the expected-utility premium exactly, splits X into retained and ceded layers, and compares the insurer's maximum price for the ceded layer with the reinsurer's net minimum E[X_C]."
     },
     {
       "chapter": "Modern Chapter 2 — Individual risk",
       "names": ["نجمه زارع"],
       "source_files": ["Students Work/Ch2/files/پیچش.R", "Students Work/Ch2/files/approximation.R"],
       "modules": ["actuarial/individual_risk.py"],
-      "adaptations": "Normalized convolution and generalized moment-based approximations with explicit independence assumptions."
+      "adaptations": "The student's submitted approximation file implements the Normal, Normal Power, and translated-gamma methods. The current page applies them to the first three moments of each selected policy's complete 1,000-month paid-loss distribution, including zero months and variable positive payments; the independent benchmark removes only cross-policy covariance and is compared with the same-month empirical aggregate that retains shared-accident dependence. The separately submitted convolution file combines two aggregate accident-count distributions, so it remains provenance evidence but is not presented as an individual-policy loss calculation. The fixed-benefit Bernoulli reduction is not used for portfolio results."
     },
     {
       "chapter": "Modern Chapter 3 — Collective risk",
       "names": ["محمد مهدوی نسب", "علی جهانبان", "محمدرضا سعیدخانی", "محمد اشکوری"],
       "source_files": ["Students Work/Ch3/files/3.5.ipynb", "Students Work/Ch3/files/3.6.ipynb", "Students Work/Ch3/files/3.7.ipynb", "Students Work/Ch3/files/Section_3.8.py", "Students Work/Ch3/files/3.9.py", "Students Work/Ch3/files/3.9-improved.py", "Students Work/Ch3/files/Section_3.10.py"],
       "modules": ["actuarial/collective_risk.py"],
-      "adaptations": "Consolidated fitting, Panjer, FFT, simulation, approximation, and stop-loss logic with normalization checks."
+      "adaptations": "The Chapter 3 submissions were consolidated into a coverage-stratified compound-loss workflow: Poisson and negative-binomial claim-frequency fitting; Gamma, inverse-Gaussian, exponential-mixture, lognormal, and Pareto severity fitting with AIC comparison; Panjer, FFT, and reproducible Monte Carlo aggregate-distribution routes; moment and Normal-approximation checks; own-damage plus liability reconciliation; and an empirical stop-loss continuation. Invalid sparse-vector normalization and fragile hard-coded paths were not reused, and physical-accident frequency remains a diagnostic rather than a substitute for policy-claim frequency."
     },
     {
       "chapter": "Modern Chapter 4 — Ruin theory",
       "names": ["ابوالفضل اقراری", "حامد اشراقی"],
       "source_files": ["Students Work/Ch4/files/insurance_ruin_analysis.py"],
       "modules": ["actuarial/ruin.py"],
-      "adaptations": "Finite-horizon labeling, reproducible simulation, retained-loss premium consistency, and heavy-tail applicability checks."
+      "adaptations": "The submitted Chapter 4 heavy-tail, discrete-time ruin exercise is connected to the reconciled 1,000-month portfolio-loss sample and the shared monthly stop-loss definition S=min(X,d). The page uses seeded empirical resampling to estimate finite-horizon first ruin under c=(1+theta)E[S], reports Monte Carlo uncertainty and first-ruin timing, visualizes surplus paths, and tests sensitivity to initial capital. It deliberately reports neither an ultimate-ruin probability nor a Lundberg bound, because the source Pareto component does not justify a finite positive moment-generating function."
     }
   ]
 }

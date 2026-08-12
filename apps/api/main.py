@@ -12,10 +12,11 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from scipy import stats
 
-from actuarial.collective_risk import fit_frequency
+from actuarial.collective_risk import compound_empirical_model, fit_frequency, fit_severity
 from actuarial.data_pipeline import assert_reconciled, default_paths
-from actuarial.individual_risk import approximation_quantiles, bernoulli_portfolio
+from actuarial.individual_risk import approximation_quantiles_from_moments, independent_policy_moments
 from actuarial.risk_measures import bootstrap_var, empirical_var_tvar, evt_var_tvar, normal_var_tvar, retained_losses
 from actuarial.utility_reinsurance import stop_loss, theoretical_entropic_availability, utility_certainty_equivalent, utility_reinsurance_premium
 
@@ -44,7 +45,7 @@ class UtilityRequest(BaseModel):
 
 
 class IndividualRequest(BaseModel):
-    portfolio_size: int = Field(500, ge=2, le=17_000)
+    portfolio_size: int = Field(500, ge=2, le=5_000)
     coverage: Literal["all", "own_damage", "third_party_liability"] = "all"
     segment: Literal["all", "standard", "preferred", "commercial"] = "all"
     confidence: float = Field(0.95, gt=0, lt=1)
@@ -53,6 +54,8 @@ class IndividualRequest(BaseModel):
 class CollectiveRequest(BaseModel):
     coverage: Coverage = "total"
     confidence: float = Field(0.95, gt=0, lt=1)
+    frequency_model: Literal["poisson", "negative_binomial"] = "poisson"
+    method: Literal["monte_carlo", "panjer", "fft"] = "monte_carlo"
 
 
 class RuinRequest(BaseModel):
@@ -313,32 +316,47 @@ def individual_risk(request: IndividualRequest):
     selected = eligible[: request.portfolio_size]
     if len(selected) < 2:
         raise ValueError("selected policy set must contain at least two policies")
-    selected_ids = {item["policy_id"] for item in selected}
-    q = [float(item["empirical_claim_probability"]) for item in selected]
-    b = [float(item["mean_paid_loss_million_toman"]) for item in selected]
-    if not any(q) or not any(b):
-        raise ValueError("selected policy set has no simulated claims")
-    empirical_by_month: dict[str, float] = defaultdict(float)
+    policy_index = {item["policy_id"]: index for index, item in enumerate(selected)}
+    month_ids = [str(row["Month_ID"]) for row in month_rows()]
+    month_index = {month_id: index for index, month_id in enumerate(month_ids)}
+    policy_month_losses = np.zeros((len(selected), len(month_ids)), dtype=float)
     for claim in claims():
-        if claim["policy_id"] in selected_ids:
-            empirical_by_month[claim["month_id"]] += float(claim["insurer_paid_million_toman"])
-    sample = np.array(
-        [empirical_by_month.get(f"M{index + 1:04d}", 0.0) for index in range(1_000)],
-        dtype=float,
+        row_index = policy_index.get(claim["policy_id"])
+        column_index = month_index.get(claim["month_id"])
+        if row_index is not None and column_index is not None:
+            policy_month_losses[row_index, column_index] += float(claim["insurer_paid_million_toman"])
+    if not np.any(policy_month_losses):
+        raise ValueError("selected policy set has no simulated claims")
+
+    moments = independent_policy_moments(policy_month_losses)
+    moment_values = moments.values
+    approximations = approximation_quantiles_from_moments(
+        moment_values["mean"],
+        moment_values["variance"],
+        moment_values["third_central_moment"],
+        request.confidence,
     )
+    sample = policy_month_losses.sum(axis=0)
+    shared_variance = float(sample.var(ddof=1))
     return {
         "policy_count": len(selected),
         "coverage": request.coverage,
         "segment": request.segment,
-        "independent_moments": serialize(bernoulli_portfolio(q, b)),
-        "independent_approximations": serialize(approximation_quantiles(q, b, request.confidence)),
+        "observation_unit": "one policy's insurer-paid loss in one synthetic month",
+        "months_per_policy": len(month_ids),
+        "independent_moments": serialize(moments),
+        "independent_approximations": serialize(approximations),
         "shared_accident_empirical": {
             "result_type": "simulated",
             "mean": float(sample.mean()),
-            "variance": float(sample.var(ddof=1)),
-            "standard_deviation": float(sample.std(ddof=1)),
+            "variance": shared_variance,
+            "standard_deviation": shared_variance**0.5,
             "quantile": float(np.quantile(sample, request.confidence, method="inverted_cdf")),
             "month_losses": sample.tolist(),
+        },
+        "dependence_effect": {
+            "covariance_contribution_to_variance": shared_variance - float(moment_values["variance"]),
+            "mean_reconciliation_error": float(sample.mean()) - float(moment_values["mean"]),
         },
     }
 
@@ -369,50 +387,141 @@ def frequency_fit(
     return result
 
 
-@app.post("/api/collective-risk")
-def collective_risk(request: CollectiveRequest):
-    month_claims: dict[str, list[dict[str, str]]] = defaultdict(list)
-    eligible_claims = []
-    for claim in claims():
-        if request.coverage == "total" or claim["coverage_type"] == request.coverage:
-            month_claims[claim["month_id"]].append(claim)
-            eligible_claims.append(claim)
-    counts = np.array([len(month_claims.get(f"M{index + 1:04d}", [])) for index in range(1_000)])
-    severities = np.array([float(item["insurer_paid_million_toman"]) for item in eligible_claims])
-    aggregate = coverage_losses(request.coverage)
+def _claim_sample(coverage: str) -> tuple[np.ndarray, np.ndarray]:
+    selected = [item for item in claims() if item["coverage_type"] == coverage]
+    count_by_month: dict[str, int] = defaultdict(int)
+    for item in selected:
+        count_by_month[item["month_id"]] += 1
+    counts = np.array([count_by_month.get(f"M{index + 1:04d}", 0) for index in range(1_000)])
+    severities = np.array([float(item["insurer_paid_million_toman"]) for item in selected])
+    return counts, severities
 
-    def component(coverage: str):
-        selected = [item for item in claims() if item["coverage_type"] == coverage]
-        count_by_month: dict[str, int] = defaultdict(int)
-        for item in selected:
-            count_by_month[item["month_id"]] += 1
-        component_counts = np.array([count_by_month.get(f"M{index + 1:04d}", 0) for index in range(1_000)])
-        component_severity = np.array([float(item["insurer_paid_million_toman"]) for item in selected])
-        return {
-            "coverage": coverage,
-            "mean_frequency": float(component_counts.mean()),
-            "mean_severity": float(component_severity.mean()),
-            "expected_aggregate_loss": float(component_counts.mean() * component_severity.mean()),
-        }
 
-    components = (
-        [component("own_damage"), component("third_party_liability")]
-        if request.coverage == "total"
-        else [component(request.coverage)]
+@lru_cache(maxsize=24)
+def _collective_model(coverage: str, frequency_model: str, method: str) -> dict:
+    aggregate = coverage_losses(coverage)
+    grid_size = 2048
+    grid_width = max(0.25, float(aggregate.max()) * 1.5 / (grid_size - 1))
+    component_coverages = (
+        ["own_damage", "third_party_liability"]
+        if coverage == "total"
+        else [coverage]
     )
+    component_models = []
+    components = []
+    all_severities = []
+    for index, component_coverage in enumerate(component_coverages):
+        component_counts, component_severities = _claim_sample(component_coverage)
+        model = compound_empirical_model(
+            component_counts,
+            component_severities,
+            frequency_model,
+            method,
+            grid_width,
+            grid_size=grid_size,
+            simulations=20_000,
+            seed=1405 + index * 101,
+        )
+        component_models.append(model)
+        all_severities.append(component_severities)
+        components.append({
+            "coverage": component_coverage,
+            "mean_frequency": float(component_counts.mean()),
+            "mean_severity": float(component_severities.mean()),
+            "expected_aggregate_loss": float(component_counts.mean() * component_severities.mean()),
+            "fitted_frequency_variance": model.values["frequency_variance"],
+            "fit_message": model.message,
+        })
+
+    probability_mass = np.array(component_models[0].values["probability_mass"], dtype=float)
+    for component_model in component_models[1:]:
+        probability_mass = np.convolve(
+            probability_mass,
+            np.array(component_model.values["probability_mass"], dtype=float),
+        )[:grid_size]
+    if probability_mass.size < grid_size:
+        probability_mass = np.pad(probability_mass, (0, grid_size - probability_mass.size))
+
+    model_mean = float(sum(item.values["model_mean"] for item in component_models))
+    model_variance = float(sum(item.values["model_variance"] for item in component_models))
+    represented_mass = float(probability_mass.sum())
+    model_cdf = np.cumsum(probability_mass)
+    chart_upper_index = min(
+        grid_size - 1,
+        max(
+            int(np.ceil(float(aggregate.max()) / grid_width)),
+            int(np.searchsorted(model_cdf, min(0.995, represented_mass), side="left")),
+        ),
+    )
+    loss_edges = np.linspace(0, (chart_upper_index + 1) * grid_width, 57)
+    empirical_probability, _ = np.histogram(aggregate, bins=loss_edges)
+    empirical_probability = empirical_probability / aggregate.size
+    grid_losses = np.arange(grid_size) * grid_width
+    model_bins = np.digitize(grid_losses, loss_edges, right=False) - 1
+    model_probability = np.array([
+        probability_mass[model_bins == index].sum() for index in range(loss_edges.size - 1)
+    ])
+    chart_losses = ((loss_edges[:-1] + loss_edges[1:]) / 2).tolist()
+
+    severity_sample = np.concatenate(all_severities)
+    severity_fits = []
+    for severity_model in ("gamma", "inverse_gaussian", "exponential_mixture", "lognormal", "pareto"):
+        fitted = fit_severity(severity_sample, severity_model)
+        severity_fits.append({
+            "model": severity_model,
+            "aic": fitted.values["aic"],
+            "parameters": fitted.values["parameters"],
+        })
+    best_aic = min(item["aic"] for item in severity_fits)
+    for item in severity_fits:
+        item["delta_aic"] = item["aic"] - best_aic
+
+    all_counts = np.sum([_claim_sample(item)[0] for item in component_coverages], axis=0)
+    all_severity_mean = float(severity_sample.mean())
     expected_from_components = sum(item["expected_aggregate_loss"] for item in components)
     return {
-        "result_type": "simulated",
-        "coverage": request.coverage,
+        "result_type": "simulated" if method == "monte_carlo" else "approximate",
+        "coverage": coverage,
+        "frequency_model": frequency_model,
+        "method": method,
         "frequency_unit": "claims",
-        "mean_frequency": float(counts.mean()),
-        "mean_severity": float(severities.mean()),
+        "mean_frequency": float(all_counts.mean()),
+        "mean_severity": all_severity_mean,
         "empirical_mean_aggregate_loss": float(aggregate.mean()),
         "component_expected_aggregate_loss": expected_from_components,
         "identity_relative_error": abs(expected_from_components / float(aggregate.mean()) - 1.0),
-        "p95_aggregate_loss": float(np.quantile(aggregate, request.confidence, method="inverted_cdf")),
         "components": components,
+        "model_mean": model_mean,
+        "model_variance": model_variance,
+        "represented_mass": represented_mass,
+        "grid_width": grid_width,
+        "probability_mass": probability_mass.tolist(),
+        "aggregate_distribution": {
+            "losses": chart_losses,
+            "empirical_probability": empirical_probability.tolist(),
+            "model_probability": model_probability.tolist(),
+        },
+        "severity_fits": severity_fits,
     }
+
+
+@app.post("/api/collective-risk")
+def collective_risk(request: CollectiveRequest):
+    base = _collective_model(request.coverage, request.frequency_model, request.method)
+    probability_mass = np.array(base["probability_mass"], dtype=float)
+    cdf = np.cumsum(probability_mass)
+    quantile_index = int(np.searchsorted(cdf, request.confidence, side="left"))
+    quantile_index = min(quantile_index, probability_mass.size - 1)
+    aggregate = coverage_losses(request.coverage)
+    response = {key: value for key, value in base.items() if key != "probability_mass"}
+    response.update({
+        "model_quantile": quantile_index * base["grid_width"],
+        "empirical_quantile": float(np.quantile(aggregate, request.confidence, method="inverted_cdf")),
+        "normal_approximation_quantile": float(
+            base["model_mean"] + np.sqrt(base["model_variance"]) * stats.norm.ppf(request.confidence)
+        ),
+    })
+    return response
 
 
 @app.post("/api/ruin")
@@ -427,6 +536,7 @@ def ruin(request: RuinRequest):
     ruined = np.any(surplus < 0, axis=1)
     probability = float(ruined.mean())
     standard_error = float(np.sqrt(probability * (1.0 - probability) / request.paths))
+    first_ruin_month = np.where(ruined, np.argmax(surplus < 0, axis=1) + 1, 0)
     return {
         "result_type": "simulated",
         "coverage": request.coverage,
@@ -436,6 +546,8 @@ def ruin(request: RuinRequest):
         "retention": request.retention,
         "finite_horizon_ruin_probability": probability,
         "monte_carlo_standard_error": standard_error,
+        "ruined_paths": int(ruined.sum()),
+        "mean_first_ruin_month": float(first_ruin_month[ruined].mean()) if ruined.any() else None,
         "horizon": request.horizon,
         "paths": request.paths,
         "seed": request.seed,

@@ -1,8 +1,19 @@
 import numpy as np
 import pytest
 
-from actuarial.collective_risk import compound_poisson_fft, panjer_poisson, simulate_compound_poisson
-from actuarial.individual_risk import bernoulli_portfolio, exact_integer_convolution
+from actuarial.collective_risk import (
+    compound_fft,
+    compound_poisson_fft,
+    fit_frequency,
+    panjer_compound,
+    panjer_poisson,
+    simulate_compound_poisson,
+)
+from actuarial.individual_risk import (
+    bernoulli_portfolio,
+    exact_integer_convolution,
+    independent_policy_moments,
+)
 from actuarial.risk_measures import empirical_var_tvar, evt_var_tvar, retained_losses
 from actuarial.ruin import adjustment_coefficient_exponential, lundberg_bound, simulate_discrete_ruin
 from actuarial.utility_reinsurance import (
@@ -117,12 +128,51 @@ def test_bernoulli_moments_and_convolution_normalize():
     assert convolution == pytest.approx([0.125, 0.5, 0.375])
 
 
+def test_independent_policy_moments_keep_each_policy_empirical_severity_distribution():
+    losses = np.array([
+        [0.0, 10.0, 30.0, 0.0],
+        [0.0, 0.0, 20.0, 40.0],
+    ])
+    result = independent_policy_moments(losses).values
+    assert result["mean"] == pytest.approx(losses.sum(axis=0).mean())
+    assert result["variance"] == pytest.approx(losses[0].var(ddof=1) + losses[1].var(ddof=1))
+    assert result["standard_deviation"] == pytest.approx(result["variance"] ** 0.5)
+    assert result["mean_nonzero_probability"] == pytest.approx(0.5)
+    assert result["mean_positive_policy_month_loss"] == pytest.approx(25.0)
+
+
 def test_panjer_and_fft_agree_on_controlled_example():
     severity = [0.0, 0.65, 0.35]
     panjer = np.array(panjer_poisson(severity, 1.2, max_loss=100).values["probability_mass"])
     fft = np.array(compound_poisson_fft(severity, 1.2, grid_size=512).values["probability_mass"])
     np.testing.assert_allclose(panjer[:60], fft[:60], atol=1e-10)
     assert panjer.sum() == pytest.approx(1, abs=1e-10)
+
+
+def test_negative_binomial_panjer_and_fft_agree():
+    severity = [0.0, 0.65, 0.35]
+    parameters = {"size": 2.5, "probability": 0.6}
+    panjer = np.array(panjer_compound(severity, "negative_binomial", parameters, 120).values["probability_mass"])
+    fft = np.array(compound_fft(severity, "negative_binomial", parameters, grid_size=512).values["probability_mass"])
+    np.testing.assert_allclose(panjer[:80], fft[:80], atol=1e-10)
+    assert panjer.sum() == pytest.approx(1, abs=1e-10)
+
+
+def test_frequency_fit_returns_observed_and_fitted_plot_series():
+    counts = np.array([0, 0, 1, 1, 1, 2, 2, 4, 6, 8])
+    poisson = fit_frequency(counts, "poisson")
+    negative_binomial = fit_frequency(counts, "negative_binomial")
+    assert poisson.values["observed_mean"] == pytest.approx(negative_binomial.values["observed_mean"])
+    assert poisson.values["observed_variance"] == pytest.approx(negative_binomial.values["observed_variance"])
+    assert poisson.values["fitted_variance"] == pytest.approx(poisson.values["fitted_mean"])
+    assert negative_binomial.values["fitted_variance"] > negative_binomial.values["fitted_mean"]
+    assert negative_binomial.values["fitted_variance"] != pytest.approx(poisson.values["fitted_variance"])
+    assert negative_binomial.convergence == "maximum_likelihood"
+    assert sum(poisson.values["observed_frequency"]) == counts.size
+    assert len(poisson.values["support"]) == len(poisson.values["fitted_expected_frequency"])
+    assert poisson.values["fitted_expected_frequency"] != pytest.approx(
+        negative_binomial.values["fitted_expected_frequency"]
+    )
 
 
 def test_compound_simulation_matches_theoretical_moment():

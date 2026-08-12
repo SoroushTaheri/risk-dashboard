@@ -23,7 +23,9 @@ test("server-renders the corrected actuarial laboratory shell", async () => {
   assert.match(html, /synthetic monthly observations/);
   assert.match(html, /Risk Measures/);
   assert.match(html, /Utility &amp; Reinsurance/);
-  assert.match(html, /Methodology &amp; Credits/);
+  assert.doesNotMatch(html, /Methodology &amp; Credits/);
+  assert.match(html, /Final project for Risk Theory/);
+  assert.match(html, /Second semester 1404–1405/);
   assert.match(html, /فارسی/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
@@ -35,7 +37,6 @@ test("all chapter routes render their central question", async () => {
     ["/individual-risk", /From policy risks to aggregate loss/],
     ["/collective-risk", /Claim frequency, severity, and aggregate loss/],
     ["/solvency-ruin", /Surplus, solvency, and finite-horizon ruin/],
-    ["/methodology", /How each result is produced and credited/],
   ];
   for (const [pathname, expected] of routes) {
     const response = await render(pathname);
@@ -122,7 +123,7 @@ test("risk measures explain estimators and keep chart comparisons legible", asyn
   assert.match(riskSource, /not .* individual accidents or claim files/);
   assert.match(riskSource, /\widehat\{\\operatorname\{VaR\}\}_p=X_/);
   assert.match(riskSource, /presenting its VaR as a fourth independent estimator would therefore be circular/);
-  assert.match(riskSource, /not the insurer-paid portfolio-loss variable used by the final entity-first model/);
+  assert.match(riskSource, /not a fourth estimator/);
   assert.match(riskSource, /className="method-cards"/);
   assert.match(riskSource, /className="delta-gamma-note"/);
   assert.match(riskSource, /Hypothetical only/);
@@ -143,10 +144,79 @@ test("risk measures explain estimators and keep chart comparisons legible", asyn
 });
 
 test("rendered UI presents only the final data model", async () => {
-  const [portfolioResponse, methodologyResponse] = await Promise.all([render("/"), render("/methodology")]);
+  const portfolioResponse = await render("/");
   const portfolioHtml = await portfolioResponse.text();
-  const methodologyHtml = await methodologyResponse.text();
   assert.doesNotMatch(portfolioHtml, /Corrected|اصلاح|Liability · (?:property|bodily)|شخص ثالث · (?:مالی|جانی)/i);
   assert.doesNotMatch(portfolioHtml, /Version 2 reconciliation gate passed|کنترل تطبیق نسخه‌ی ۲ تأیید شد/);
-  assert.doesNotMatch(methodologyHtml, /Superseded|What was corrected|Removed Total_Loss_Cases|اصلاح|مدل جایگزین‌شده|حذف Total_Loss_Cases/i);
+});
+
+test("chapter credits hide filenames and include the integration role", async () => {
+  const uiSource = await readFile(new URL("../app/components/ui.tsx", import.meta.url), "utf8");
+  assert.match(uiSource, /Soroush Taheri/);
+  assert.match(uiSource, /سروش طاهری/);
+  assert.match(uiSource, /Python API backend/);
+  assert.match(uiSource, /Chapter\/page implementation/);
+  assert.match(uiSource, /Validation, fitting & integration/);
+  assert.doesNotMatch(uiSource, /files|\/methodology/);
+});
+
+test("every page includes its current contribution summary", async () => {
+  const sources = [
+    ["PortfolioExperience.tsx", /original calibration target/],
+    ["RiskExperience.tsx", /not a fourth estimator/],
+    ["UtilityExperience.tsx", /same local absolute risk aversion/],
+    ["IndividualExperience.tsx", /complete 1,000 monthly paid-loss outcomes/],
+    ["CollectiveExperience.tsx", /coverage-stratified compound-loss workflow/],
+    ["RuinExperience.tsx", /No ultimate-ruin probability or Lundberg bound/],
+  ];
+  for (const [filename, expectedSummary] of sources) {
+    const source = await readFile(new URL(`../app/components/experiences/${filename}`, import.meta.url), "utf8");
+    assert.match(source, /<Contributor\b/, filename);
+    assert.match(source, expectedSummary, filename);
+  }
+});
+
+test("individual-risk page separates book, student, and portfolio scope", async () => {
+  const source = await readFile(new URL("../app/components/experiences/IndividualExperience.tsx", import.meta.url), "utf8");
+  assert.match(source, /One question, three clearly separated sources/);
+  assert.match(source, /Book foundation/);
+  assert.match(source, /Student-submitted files/);
+  assert.match(source, /Portfolio application/);
+  assert.match(source, /Normal Power/);
+  assert.match(source, /Translated Gamma/);
+  assert.match(source, /No average fixed benefit replaces those observed severities/);
+  assert.match(source, /Average monthly payment probability per policy/);
+  assert.match(source, /For each policy: paid months ÷/);
+  assert.match(source, /میانگین احتمال پرداخت ماهانه‌ی هر بیمه‌نامه/);
+  assert.match(source, /Why is the mean fixed while dispersion changes\?/);
+  assert.match(source, /The means are always identical by the linearity of expectation/);
+  assert.match(source, /Direct model comparison/);
+  assert.match(source, /Both models remain visible at the same time/);
+  assert.match(source, /money\(independentMean\)/);
+  assert.match(source, /money\(sharedMean\)/);
+  assert.match(source, /money\(independentSd\)/);
+  assert.match(source, /money\(sharedSd\)/);
+  assert.doesNotMatch(source, /The two means differ by only|اختلاف میانگین دو روش فقط|meanReconciliationLabel/);
+  assert.match(source, /accident-count convolution is recorded as provenance but is not presented as an individual-policy calculation/);
+  assert.match(source, /Claim-count fitting and compound frequency-severity models belong to Chapter 3/);
+  assert.doesNotMatch(source, /Independent Bernoulli|برنولی مستقل|q_i b_i|q_i\(1-q_i\)b_i\^2/);
+  assert.doesNotMatch(source, /تمرین|exercise/i);
+});
+
+test("ruin page defines the simulation, zero estimate, and both chart axes", async () => {
+  const source = await readFile(new URL("../app/components/experiences/RuinExperience.tsx", import.meta.url), "utf8");
+  assert.match(source, /What exactly is being simulated\?/);
+  assert.match(source, /Start with 1,000 months/);
+  assert.match(source, /S=\\min\(X,d\)/);
+  assert.match(source, /Monte Carlo result, not proof of impossibility/);
+  assert.match(source, /Surplus Uₖ \(million tomans\)/);
+  assert.match(source, /Pr\(first ruin by month n\)/);
+  assert.match(source, /probabilityAxisMaximum/);
+  assert.match(source, /type: "value", name: t\("Initial capital u/);
+  assert.match(source, /T is the first ruin month/);
+  assert.match(source, /metric-fraction" dir="ltr"/);
+  assert.match(source, /width: series\.ruined \? 3\.2 : 1\.25/);
+  assert.match(source, /type: "scatter"/);
+  assert.doesNotMatch(source, /index === 0 \? 2\.3/);
+  assert.doesNotMatch(source, /value=\{t\("Same months"/);
 });

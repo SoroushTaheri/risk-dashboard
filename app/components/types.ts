@@ -1,4 +1,4 @@
-export type ViewKey = "portfolio" | "risk" | "utility" | "individual" | "collective" | "ruin" | "methodology";
+export type ViewKey = "portfolio" | "risk" | "utility" | "individual" | "collective" | "ruin";
 
 export type MonthRow = {
   month_id: string;

@@ -5,7 +5,7 @@ import { Car, FileText, GitBranch, Users, WalletCards } from "lucide-react";
 import { useState } from "react";
 import { EChart } from "../EChart";
 import type { PortfolioData } from "../types";
-import { MetricCard, Notice, PanelCredit, ReferenceBand, formatMoney, formatNumber, formatMonthLabel } from "../ui";
+import { Contributor, MetricCard, Notice, PanelCredit, ReferenceBand, formatMoney, formatNumber, formatMonthLabel } from "../ui";
 import { tr, useLanguage } from "../i18n";
 import type { Coverage } from "./helpers";
 import { histogram, updateMonth, valuesFor } from "./helpers";
@@ -114,7 +114,7 @@ export function PortfolioExperience({ data }: { data: PortfolioData }) {
       <PortfolioSectionHeading
         eyebrow={t("Distribution and lineage", "توزیع و زنجیره‌ی موجودیت‌ها")}
         title={t("From the loss distribution back to its entities", "از توزیع خسارت تا موجودیت‌های سازنده‌ی آن")}
-        description={t("Read the full monthly loss distribution alongside the selected month's path from policies and accidents to claims and payments.", "توزیع کامل خسارت ماهانه را در کنار مسیر ماه انتخاب‌شده از بیمه‌نامه و حادثه تا پرونده‌ی خسارت و پرداخت بررسی کنید.")}
+        description={t("Read the full monthly loss distribution alongside the selected month's path from policies and accidents to claims and payments.", "توزیع کامل خسارت ماهانه را در کنار مسیرِ شکل‌گیری موجودیت‌های تعریف شده مانند بیمه‌نامه، حادثه، خسارت و ... در ماه انتخاب‌شده مشاهده کنید.")}
       />
       <div className="panel-grid equal">
         <section className="panel">
@@ -150,6 +150,7 @@ export function PortfolioExperience({ data }: { data: PortfolioData }) {
 
       <Notice kind="success" title={t("Version 2 reconciliation gate passed", "کنترل تطبیق نسخه‌ی ۲ تأیید شد")}>{t("All 1,000 months pass policy-coverage compatibility, component-limit, payout, lineage, deterministic-generation, and calibration checks. Analytical results are unavailable if any critical check fails.", "هر ۱۰۰۰ ماه کنترل سازگاری پوشش بیمه‌نامه، حدود اجزا، پرداخت، زنجیره‌ی ردیابی، تولید قطعی و کالیبراسیون را گذرانده‌اند. در صورت رد هر کنترل بحرانی، نتایج تحلیلی ارائه نمی‌شوند.")}</Notice>
       */}
+      <Contributor names="علی تیموری، سروش طاهری" summary={t("The submitted 1,000-row motor aggregate supplied the original calibration target. The current page replaces its ambiguous aggregate structure with a deterministic entity-first model of vehicles, separate coverage-specific policies, physical accidents, compatible claim files and components, and exactly reconciled insurer-paid losses; it then presents the monthly distribution, selected-month decompositions, and contract-to-payment lineage.", "داده‌ی تجمیعی ۱٬۰۰۰ردیفی ارائه‌شده، مبنای اولیه‌ی داده‌ی کنونی بوده است.. صفحه‌ی کنونی ساختار مبهم آن را با یک مدل قطعیِ موجودیت‌محور شامل خودروها، بیمه‌نامه‌های جدا و مختص پوشش، حادثه‌های فیزیکی، پرونده‌ها و اجزای خسارت سازگار و پرداخت‌های دقیقاً تطبیق‌یافته‌ی بیمه‌گر جایگزین می‌کند و سپس توزیع ماهانه، تجزیه‌های ماه انتخاب‌شده و زنجیره‌ی قرارداد تا پرداخت را نمایش می‌دهد.")} />
     </div>
   );
 }
