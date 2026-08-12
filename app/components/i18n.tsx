@@ -7,18 +7,25 @@ export type Language = "en" | "fa";
 const LanguageContext = createContext<{ language: Language; setLanguage: (language: Language) => void } | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguage] = useState<Language>("fa");
+  const [preferenceLoaded, setPreferenceLoaded] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("risk-theory-language");
-    if (saved === "fa" || saved === "en") queueMicrotask(() => setLanguage(saved));
+    queueMicrotask(() => {
+      if (saved === "fa" || saved === "en") setLanguage(saved);
+      setPreferenceLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("risk-theory-language", language);
     document.documentElement.lang = language;
     document.documentElement.dir = language === "fa" ? "rtl" : "ltr";
   }, [language]);
+
+  useEffect(() => {
+    if (preferenceLoaded) window.localStorage.setItem("risk-theory-language", language);
+  }, [language, preferenceLoaded]);
 
   return <LanguageContext.Provider value={{ language, setLanguage }}>{children}</LanguageContext.Provider>;
 }

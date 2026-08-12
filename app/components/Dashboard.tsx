@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import type { ViewKey } from "./types";
 import { usePortfolio } from "./usePortfolio";
@@ -57,21 +56,23 @@ function DashboardContent({ initialView }: { initialView: ViewKey }) {
     <div className="app-shell">
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
         <div className="brand-row">
-          <Link className="brand" href="/" aria-label={tr(language, "Risk Theory Lab home", "صفحه‌ی اصلی آزمایشگاه نظریه ریسک")}>
+          {/* Native navigation avoids the deployed vinext RSC transition failure. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="brand" href="/" aria-label={tr(language, "Risk Theory Lab home", "صفحه‌ی اصلی آزمایشگاه نظریه ریسک")}>
             <span className="brand-mark"><FlaskConical size={21} aria-hidden="true" /></span>
             <span><strong>{tr(language, "Risk Analysis Dashboard", "داشبورد تحلیلی ریسک")}</strong><small>{tr(language, "Shahid Beheshti University", "دانشگاه شهید بهشتی")}</small></span>
-          </Link>
+          </a>
           <button className="icon-button close-menu" onClick={() => setOpen(false)} aria-label={tr(language, "Close navigation", "بستن فهرست")}><X size={20} /></button>
         </div>
         <nav aria-label="Primary navigation">
           {nav.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.key} href={item.href} className={initialView === item.key ? "nav-link active" : "nav-link"} aria-current={initialView === item.key ? "page" : undefined}>
+              <a key={item.key} href={item.href} className={initialView === item.key ? "nav-link active" : "nav-link"} aria-current={initialView === item.key ? "page" : undefined}>
                 <Icon size={18} aria-hidden="true" />
                 <span><strong>{copy(item.label)}</strong><small>{copy(item.caption)}</small></span>
                 <ChevronRight size={15} className="nav-chevron" aria-hidden="true" />
-              </Link>
+              </a>
             );
           })}
         </nav>

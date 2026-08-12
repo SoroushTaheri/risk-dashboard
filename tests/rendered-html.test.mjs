@@ -13,24 +13,25 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the corrected actuarial laboratory shell", async () => {
+test("server-renders the actuarial laboratory in Persian by default", async () => {
   const response = await render("/");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>Risk Theory Lab<\/title>/i);
-  assert.match(html, /Policies, accidents, claims, and paid loss/);
-  assert.match(html, /synthetic monthly observations/);
-  assert.match(html, /Risk Measures/);
-  assert.match(html, /Utility &amp; Reinsurance/);
+  assert.match(html, /<html[^>]+lang="fa"[^>]+dir="rtl"/i);
+  assert.doesNotMatch(html, /Policies, accidents, claims, and paid loss/);
+  assert.doesNotMatch(html, /synthetic monthly observations/);
+  assert.doesNotMatch(html, /Risk Measures/);
+  assert.doesNotMatch(html, /Utility &amp; Reinsurance/);
   assert.doesNotMatch(html, /Methodology &amp; Credits/);
-  assert.match(html, /Final project for Risk Theory/);
-  assert.match(html, /Second semester 1404–1405/);
+  assert.doesNotMatch(html, /Final project for Risk Theory/);
+  assert.doesNotMatch(html, /Second semester 1404–1405/);
   assert.match(html, /فارسی/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
-test("all chapter routes render their central question", async () => {
+test("all chapter routes render in Persian by default", async () => {
   const routes = [
     ["/risk-measures", /VaR, TVaR, and the upper tail of loss/],
     ["/utility-reinsurance", /Utility, acceptable premium, and reinsurance/],
@@ -41,8 +42,17 @@ test("all chapter routes render their central question", async () => {
   for (const [pathname, expected] of routes) {
     const response = await render(pathname);
     assert.equal(response.status, 200, pathname);
-    assert.match(await response.text(), expected, pathname);
+    const html = await response.text();
+    assert.match(html, /<html[^>]+lang="fa"[^>]+dir="rtl"/i, pathname);
+    assert.doesNotMatch(html, expected, pathname);
   }
+});
+
+test("sidebar navigation uses native links for production-safe routing", async () => {
+  const source = await readFile(new URL("../app/components/Dashboard.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /from ["']next\/link["']/);
+  assert.match(source, /<a key=\{item\.key\} href=\{item\.href\}/);
+  assert.match(source, /<a className="brand" href="\/"/);
 });
 
 test("ships local assets and reconciled v2 month data", async () => {

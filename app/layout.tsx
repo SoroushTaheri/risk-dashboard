@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="fa" dir="rtl">
       <head>
         <link rel="preload" href="/fonts/NotoSans-Variable.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
       </head>
