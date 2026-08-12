@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DEPLOY_ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+ENV_FILE="$DEPLOY_ROOT/risk-theory.env"
+
+if [[ $EUID -ne 0 ]]; then
+  exec sudo -- "$0" "$@"
+fi
+
+docker compose -f "$DEPLOY_ROOT/compose.yaml" --env-file "$ENV_FILE" ps
+curl -fsS -o /dev/null -H 'Host: risk-theory.bluehour.cloud' http://127.0.0.1/
+curl -fsS -o /dev/null -H 'Host: api.risk-theory.bluehour.cloud' http://127.0.0.1/api/readiness
+printf 'Risk Theory frontend and API edge checks passed.\n'

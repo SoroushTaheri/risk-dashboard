@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DEPLOY_ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+CONTAINER=${RISK_THEORY_EDGE_CONTAINER:-vala-edge-nginx-1}
+SOURCE="$DEPLOY_ROOT/nginx/risk-theory.conf"
+TARGET=/etc/nginx/conf.d/risk-theory.conf
+
+if [[ $EUID -ne 0 ]]; then
+  exec sudo -- "$0" "$@"
+fi
+
+[[ -f "$SOURCE" ]] || {
+  printf 'Risk Theory edge configuration not found: %s\n' "$SOURCE" >&2
+  exit 2
+}
+
+[[ $(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null) == true ]] || {
+  printf 'Edge container is not running: %s\n' "$CONTAINER" >&2
+  exit 2
+}
+
+source_hash=$(sha256sum "$SOURCE" | awk '{print $1}')
+target_hash=$(docker exec "$CONTAINER" sha256sum "$TARGET" 2>/dev/null | awk '{print $1}' || true)
+[[ "$source_hash" == "$target_hash" ]] && exit 0
+
+docker cp "$SOURCE" "$CONTAINER:/tmp/risk-theory.conf"
+docker exec "$CONTAINER" sh -eu -c '
+target=/etc/nginx/conf.d/risk-theory.conf
+backup=/tmp/risk-theory.conf.backup
+if test -f "$target"; then
+  cp "$target" "$backup"
+else
+  rm -f "$backup"
+fi
+cp /tmp/risk-theory.conf "$target"
+if nginx -t; then
+  nginx -s reload
+  rm -f "$backup" /tmp/risk-theory.conf
+else
+  status=$?
+  if test -f "$backup"; then
+    cp "$backup" "$target"
+  else
+    rm -f "$target"
+  fi
+  rm -f "$backup" /tmp/risk-theory.conf
+  exit "$status"
+fi
+'

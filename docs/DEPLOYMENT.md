@@ -22,13 +22,17 @@ The public web container is the only published service. Its `/api/*` route forwa
 
 ## Vala production layout
 
-- The managed Compose definition lives at `/srv/vala/deploy/risk-theory/compose.yaml`.
-- Root-only image configuration lives at `/etc/vala/risk-theory.env`.
+- The isolated Compose definition lives at `/srv/risk-theory/compose.yaml`.
+- Root-only image configuration lives at `/srv/risk-theory/risk-theory.env`.
+- Existing files under `/srv/vala/deploy` and `/etc/vala` are not changed.
 - Nginx is the only service publishing host port 80.
 - The CDN terminates TLS for `risk-theory.bluehour.cloud` and
   `api.risk-theory.bluehour.cloud`; Vala serves HTTP to the CDN origin.
 - The web service keeps `/api/*` same-origin through its internal FastAPI proxy,
   while the API hostname also exposes FastAPI directly.
+- `risk-theory-route-sync.timer` keeps one additive configuration file inside
+  the running edge container without modifying the PMIS edge repository. The
+  synchronizer tests the combined Nginx configuration before a graceful reload.
 - Add proxy request-size, connection, and rate limits, especially for `/api/ruin` and `/api/collective-risk`.
 - Preserve the 100-second upstream timeout only for bounded simulations; ordinary requests should use a shorter timeout.
 - Send container logs to the homelab log destination without recording request bodies.

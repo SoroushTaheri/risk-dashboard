@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DEPLOY_ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+ENV_FILE="$DEPLOY_ROOT/risk-theory.env"
+WAIT_TIMEOUT=${RISK_THEORY_WAIT_TIMEOUT:-300}
+
+if [[ $EUID -ne 0 ]]; then
+  exec sudo -- "$0" "$@"
+fi
+
+[[ -f "$ENV_FILE" ]] || {
+  printf 'Environment file not found: %s\n' "$ENV_FILE" >&2
+  exit 2
+}
+
+compose=(docker compose -f "$DEPLOY_ROOT/compose.yaml" --env-file "$ENV_FILE")
+
+printf '\n==> Validating isolated Risk Theory configuration\n'
+"${compose[@]}" config -q
+printf '\n==> Pulling immutable dashboard images\n'
+"${compose[@]}" pull
+printf '\n==> Recreating only Risk Theory services\n'
+"${compose[@]}" up -d --force-recreate --wait --wait-timeout "$WAIT_TIMEOUT"
+printf '\n==> Synchronizing additive Nginx host routes\n'
+"$DEPLOY_ROOT/bin/sync-edge-route"
+printf '\n==> Verifying local edge routes\n'
+curl -fsS -o /dev/null -H 'Host: risk-theory.bluehour.cloud' http://127.0.0.1/
+curl -fsS -o /dev/null -H 'Host: api.risk-theory.bluehour.cloud' http://127.0.0.1/api/readiness
+printf '\n==> Risk Theory rollout complete\n'
+"${compose[@]}" ps

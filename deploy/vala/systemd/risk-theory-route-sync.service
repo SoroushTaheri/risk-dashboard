@@ -1,0 +1,8 @@
+[Unit]
+Description=Synchronize the Risk Theory route into the shared Vala edge container
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/risk-theory/bin/sync-edge-route
